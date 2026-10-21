@@ -197,14 +197,16 @@ async def match_resume_linkedin_target(
     raw_text: Optional[str] = Form(None),
     locations: str = Form("Nepal,India"),
     include_worldwide: bool = Form(True),
+    include_us_startups: bool = Form(True),
+    include_uk_startups: bool = Form(True),
     time_filter: str = Form("month"),
-    max_results: int = Form(30),
+    max_results: int = Form(35),
     min_score: int = Form(20)
 ):
     """
     Dedicated endpoint for personal matching:
     Uploads resume -> parses skills, experience, and target roles
-    -> searches live LinkedIn remote positions specifically accepting Nepal & India developers
+    -> searches live LinkedIn remote positions across Nepal, India, and US/UK startups hiring remotely from Nepal & India
     -> performs geo-eligibility screening & computes relevance fit score.
     """
     try:
@@ -226,10 +228,17 @@ async def match_resume_linkedin_target(
         target_locs = [l.strip() for l in locations.split(",") if l.strip()]
         if include_worldwide and "Worldwide" not in target_locs:
             target_locs.append("Worldwide")
+        if include_us_startups and "United States" not in target_locs:
+            target_locs.append("United States")
+        if include_uk_startups and "United Kingdom" not in target_locs:
+            target_locs.append("United Kingdom")
 
         result = await TargetJobMatcher.match_resume_to_target_jobs(
             profile=profile,
             locations=target_locs,
+            include_worldwide=include_worldwide,
+            include_us_startups=include_us_startups,
+            include_uk_startups=include_uk_startups,
             time_filter=time_filter,
             max_results=max_results,
             min_score=min_score

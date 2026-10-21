@@ -89,6 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const startTargetLinkedInBtn = document.getElementById('startTargetLinkedInBtn');
   const geoNepal = document.getElementById('geoNepal');
   const geoIndia = document.getElementById('geoIndia');
+  const geoUS = document.getElementById('geoUS');
+  const geoUK = document.getElementById('geoUK');
   const geoWorldwide = document.getElementById('geoWorldwide');
   const tabUploadFile = document.getElementById('tabUploadFile');
   const tabPasteText = document.getElementById('tabPasteText');
@@ -181,6 +183,13 @@ document.addEventListener('DOMContentLoaded', () => {
           const loc = (j.location || '').toLowerCase();
           const desc = (j.description || '').toLowerCase();
           const badge = (j.geo_badge || '').toLowerCase();
+          const status = (j.geo_status || '').toLowerCase();
+          if (g === 'us') {
+            return loc.includes('united states') || loc.includes('us') || badge.includes('us') || badge.includes('🇺🇸') || status.includes('us');
+          }
+          if (g === 'uk') {
+            return loc.includes('united kingdom') || loc.includes('uk') || loc.includes('london') || badge.includes('uk') || badge.includes('🇬🇧') || status.includes('uk');
+          }
           return loc.includes(g) || desc.includes(g) || badge.includes(g);
         });
       }
@@ -222,6 +231,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const loc = (j.location || '').toLowerCase();
         const desc = (j.description || '').toLowerCase();
         const badge = (j.geo_badge || '').toLowerCase();
+        const status = (j.geo_status || '').toLowerCase();
+        if (g === 'us') {
+          return loc.includes('united states') || loc.includes('us') || badge.includes('us') || badge.includes('🇺🇸') || status.includes('us');
+        }
+        if (g === 'uk') {
+          return loc.includes('united kingdom') || loc.includes('uk') || loc.includes('london') || badge.includes('uk') || badge.includes('🇬🇧') || status.includes('uk');
+        }
         return loc.includes(g) || desc.includes(g) || badge.includes(g);
       });
     }
@@ -863,15 +879,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const selectedLocs = [];
-        if (geoNepal && geoNepal.checked) selectedLocs.push('Nepal');
-        if (geoIndia && geoIndia.checked) selectedLocs.push('India');
-        if (selectedLocs.length === 0) selectedLocs.push('Nepal', 'India');
+        const channelsSummary = [];
+        if (geoNepal && geoNepal.checked) { selectedLocs.push('Nepal'); channelsSummary.push('Nepal'); }
+        if (geoIndia && geoIndia.checked) { selectedLocs.push('India'); channelsSummary.push('India'); }
+        if (geoUS && geoUS.checked) { selectedLocs.push('United States'); channelsSummary.push('US Startups'); }
+        if (geoUK && geoUK.checked) { selectedLocs.push('United Kingdom'); channelsSummary.push('UK Startups'); }
+        if (selectedLocs.length === 0) selectedLocs.push('Nepal', 'India', 'United States', 'United Kingdom');
 
         formData.append('locations', selectedLocs.join(','));
         formData.append('include_worldwide', geoWorldwide && geoWorldwide.checked ? 'true' : 'false');
+        formData.append('include_us_startups', geoUS && geoUS.checked ? 'true' : 'false');
+        formData.append('include_uk_startups', geoUK && geoUK.checked ? 'true' : 'false');
         formData.append('time_filter', 'month');
 
-        progressStatusText.textContent = `Scraping live LinkedIn remote jobs for ${selectedLocs.join(' & ')}...`;
+        progressStatusText.textContent = `Scraping live LinkedIn remote jobs for ${channelsSummary.join(', ')}...`;
 
         const response = await fetch('/api/resume/linkedin-target-match', {
           method: 'POST',
@@ -891,7 +912,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update UI to Match Mode
         activateCandidateRibbon(result.profile);
         closeResumeModal();
-        showToast(`🎯 Found ${result.total_matches} remote LinkedIn jobs for Nepal & India!`);
+        showToast(`🎯 Found ${result.total_matches} remote jobs across Nepal, India & US/UK Startups!`);
 
         // Switch to Match sort option
         optSortMatch.classList.remove('hidden');

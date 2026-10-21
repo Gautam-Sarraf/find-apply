@@ -270,13 +270,15 @@
             <button type="button" class="sidebar-reset-btn" id="sidebarResetBtn">Reset all</button>
           </div>
 
-          <!-- Target Geo Regions (Nepal & India Focus) -->
+          <!-- Target Geo Regions (Nepal, India & US/UK Startups Focus) -->
           <div class="sidebar-filter-group" id="targetRegionSection">
             <h5 class="filter-group-title">Target Regions</h5>
             <div class="geo-chips-list">
               <button type="button" class="geo-chip active" data-geo="all">All Regions</button>
               <button type="button" class="geo-chip" data-geo="Nepal">🇳🇵 Nepal Remote</button>
               <button type="button" class="geo-chip" data-geo="India">🇮🇳 India Remote</button>
+              <button type="button" class="geo-chip" data-geo="US">🇺🇸 US Startups</button>
+              <button type="button" class="geo-chip" data-geo="UK">🇬🇧 UK Startups</button>
               <button type="button" class="geo-chip" data-geo="Worldwide">🌍 Worldwide</button>
             </div>
           </div>
@@ -467,16 +469,16 @@
           ></textarea>
         </div>
 
-        <!-- Personal Targeting Options: Nepal & India Remote Focus -->
+        <!-- Personal Targeting Options: Nepal, India & US/UK Startups -->
         <div class="target-geo-options">
           <div class="target-geo-header">
             <div class="target-geo-title">
-              <span>🎯</span> Target Regions: Remote for Nepal & India
+              <span>🎯</span> Target Regions: Nepal, India & US/UK Startups
             </div>
             <span class="target-geo-badge">Geo-Screened</span>
           </div>
           <p class="target-geo-subtitle">
-            Scrapes live LinkedIn remote roles tailored to your exact skills and verified to accept developers in Nepal & India (filtering out US/EU-only restrictions).
+            Scrapes live LinkedIn remote roles for Nepal & India developers, including US and UK startups hiring remotely from Nepal or India.
           </p>
           <div class="target-geo-checkboxes">
             <label class="geo-checkbox-label">
@@ -486,6 +488,14 @@
             <label class="geo-checkbox-label">
               <input type="checkbox" id="geoIndia" checked>
               <span>🇮🇳 India Remote</span>
+            </label>
+            <label class="geo-checkbox-label">
+              <input type="checkbox" id="geoUS" checked>
+              <span>🇺🇸 US Startups (Remote IN/NP)</span>
+            </label>
+            <label class="geo-checkbox-label">
+              <input type="checkbox" id="geoUK" checked>
+              <span>🇬🇧 UK Startups (Remote IN/NP)</span>
             </label>
             <label class="geo-checkbox-label">
               <input type="checkbox" id="geoWorldwide" checked>
@@ -508,7 +518,7 @@
             <span>⚡ All Sources</span>
           </button>
           <button type="button" class="btn btn-primary btn-match-target" id="startTargetLinkedInBtn" disabled>
-            <span>🎯 Match LinkedIn (Nepal & India)</span>
+            <span>🎯 Match LinkedIn (Nepal, India & US/UK)</span>
           </button>
         </div>
       </div>

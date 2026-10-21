@@ -8,7 +8,8 @@ import asyncio
 import logging
 import re
 from typing import Dict, List, Optional, Any, Tuple
-from linkedin_scraper import scraper
+import httpx
+from linkedin_scraper import scraper, DEFAULT_HEADERS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("TargetJobMatcher")
@@ -21,11 +22,39 @@ INDIAN_LOCATIONS = {
 }
 
 NEPALI_LOCATIONS = {
-    "nepal", "kathmandu", "lalitpur", "bhaktapur", "pokhara", "biratnagar", "chitwan"
+    "nepal", "kathmandu", "lalitpur", "bhaktapur", "pokhara", "biratnagar", "chitwan", "butwal", "dharan"
 }
+
+US_LOCATIONS = {
+    "united states", "us", "usa", "san francisco", "new york", "austin", "seattle", "boston",
+    "los angeles", "california", "chicago", "denver", "colorado", "texas", "sunnyvale",
+    "san jose", "palo alto", "cambridge", "portland", "atlanta", "remote in us"
+}
+
+UK_LOCATIONS = {
+    "united kingdom", "uk", "london", "england", "manchester", "cambridge", "edinburgh",
+    "bristol", "oxford", "birmingham", "leeds", "scotland"
+}
+
+STARTUP_PATTERNS = [
+    r"\b(?:startup|seed|series\s+[a-d]|backed\s+by|y\s+combinator|yc|early[- ]stage|founding|stealth|scaleup|fast[- ]growing|venture|fintech|healthtech|ai\s+startup)\b"
+]
+
+OFFSHORE_GLOBAL_PATTERNS = [
+    r"\b(?:hire|hiring|open\s+to|accepting|contractor|developers?|engineers?)\s+(?:in|from)\s+(?:india|nepal|asia|apac)\b",
+    r"\b(?:india|nepal)\s+(?:remote|contractor|offshore|residents?)\b",
+    r"\b(?:work|working)\s+(?:from\s+anywhere|worldwide|globally)\b",
+    r"\b(?:deel|remote\.com|oyster|eor|international\s+contractor|b2b\s+contractor)\b",
+    r"\bglobal\s+(?:remote|talent|team|workforce|engineering)\b",
+    r"\bany\s+timezone\b",
+    r"\bopen\s+to\s+(?:international|global|worldwide|apac|india|nepal)\b",
+    r"\bdistributed\s+(?:team|engineering|workforce)\b",
+    r"\boffshore\s+(?:team|engineers?|developers?)\b"
+]
 
 # Negative patterns indicating strict geographical restrictions
 EXCLUSION_PATTERNS = [
+    r"\b(?:us|united states|uk|canada|eu)\s+candidates?\s+only\b",
     r"\b(?:must|need to)\s+be\s+(?:located|based|resident)\s+in\s+the\s+(?:us|usa|united states|uk|canada|europe|eu)\b",
     r"\b(?:us|united states)\s+(?:citizens?|green card|permanent resident)\s+only\b",
     r"\b(?:only|strictly)\s+(?:us|uk|eu|canada)\s+(?:candidates|applicants|residents)\b",
@@ -33,7 +62,8 @@ EXCLUSION_PATTERNS = [
     r"\b(?:us|eu|uk)\s+work\s+authorization\s+required\b",
     r"\bno\s+(?:visa\s+sponsorship|international\s+applicants)\b",
     r"\blatam\s+only\b",
-    r"\bcanada\s+only\b"
+    r"\bcanada\s+only\b",
+    r"\beu\s+only\b"
 ]
 
 POSITIVE_GLOBAL_PATTERNS = [
@@ -51,7 +81,8 @@ POSITIVE_GLOBAL_PATTERNS = [
 
 class TargetJobMatcher:
     """
-    Intelligent matcher for finding remote LinkedIn jobs accepting developers from Nepal and India.
+    Intelligent matcher for finding remote LinkedIn jobs accepting developers from Nepal and India,
+    including US & UK startups hiring remotely from Nepal and India.
     """
 
     @classmethod
@@ -86,7 +117,6 @@ class TargetJobMatcher:
         if not queries:
             queries = ["Python Developer", "Backend Engineer"]
 
-        # Limit to top 3-4 distinct queries to balance rate limits and diversity
         return list(dict.fromkeys(queries))[:3]
 
     @classmethod
@@ -94,27 +124,34 @@ class TargetJobMatcher:
         cls,
         location_str: str,
         description: str = "",
-        target_countries: Optional[List[str]] = None
+        title_str: str = ""
     ) -> Dict[str, Any]:
         """
-        Verifies if a remote position accepts candidates residing in India or Nepal.
+        Verifies if a remote position accepts candidates residing in India or Nepal,
+        or is a US/UK startup hiring remotely from Nepal/India.
         """
         loc_lower = (location_str or "").lower()
         desc_lower = (description or "").lower()
+        title_lower = (title_str or "").lower()
+        combined_text = f"{title_lower} {loc_lower} {desc_lower}"
 
-        # Check for strict exclusion clauses
-        for pat in EXCLUSION_PATTERNS:
-            if re.search(pat, desc_lower):
-                return {
-                    "is_eligible": False,
-                    "status": "RESTRICTED",
-                    "badge": "🚫 Restricted (US/EU Only)",
-                    "badge_color": "#ef4444",
-                    "reason": "Requires US/EU work authorization or strict local residency."
-                }
+        # 1. Check for explicit positive Nepal/India/Offshore hiring signals first
+        has_offshore_signal = any(re.search(pat, combined_text) for pat in OFFSHORE_GLOBAL_PATTERNS)
 
-        # Check if explicitly in Nepal
-        is_nepal = any(nl in loc_lower for nl in NEPALI_LOCATIONS)
+        # 2. Check for strict exclusion clauses (unless explicitly overridden by offshore/India/Nepal mentions)
+        if not has_offshore_signal:
+            for pat in EXCLUSION_PATTERNS:
+                if re.search(pat, title_lower) or re.search(pat, desc_lower):
+                    return {
+                        "is_eligible": False,
+                        "status": "RESTRICTED",
+                        "badge": "🚫 Restricted (US/EU Only)",
+                        "badge_color": "#ef4444",
+                        "reason": "Requires US/EU work authorization or strict local residency."
+                    }
+
+        # 3. Check if explicitly in Nepal
+        is_nepal = any(nl in loc_lower for nl in NEPALI_LOCATIONS) or ("nepal" in desc_lower and "remote" in desc_lower)
         if is_nepal:
             return {
                 "is_eligible": True,
@@ -124,8 +161,8 @@ class TargetJobMatcher:
                 "reason": "Remote position based in Nepal - Directly hires Nepali developers."
             }
 
-        # Check if explicitly in India
-        is_india = any(il in loc_lower for il in INDIAN_LOCATIONS)
+        # 4. Check if explicitly in India
+        is_india = any(il in loc_lower for il in INDIAN_LOCATIONS) or ("india" in desc_lower and "remote" in desc_lower)
         if is_india:
             return {
                 "is_eligible": True,
@@ -135,7 +172,56 @@ class TargetJobMatcher:
                 "reason": "Remote position based in India - Directly hires Indian/Nepali developers."
             }
 
-        # Check for Worldwide / Global Remote signals
+        # 5. Check if US Startup hiring remotely (specifically open to Nepal/India/Contractors)
+        is_us = any(u in loc_lower for u in US_LOCATIONS) or "united states" in loc_lower
+        is_startup = any(re.search(pat, desc_lower) for pat in STARTUP_PATTERNS) or "startup" in combined_text
+
+        if is_us:
+            if has_offshore_signal or ("india" in desc_lower or "nepal" in desc_lower):
+                return {
+                    "is_eligible": True,
+                    "status": "ACCEPTED_US_STARTUP",
+                    "badge": "🇺🇸 US Startup (Hires Remote IN/NP)",
+                    "badge_color": "#2563eb",
+                    "reason": "US startup actively hiring remote engineers in Nepal & India."
+                }
+            if is_startup or any(re.search(pat, desc_lower) for pat in POSITIVE_GLOBAL_PATTERNS):
+                return {
+                    "is_eligible": True,
+                    "status": "ACCEPTED_US_STARTUP",
+                    "badge": "🇺🇸 US Startup (Remote IN/NP)",
+                    "badge_color": "#3b82f6",
+                    "reason": "US-based startup offering remote role (open to global/contractor applicants in Nepal & India)."
+                }
+            # General US remote with no hard exclusion
+            return {
+                "is_eligible": True,
+                "status": "ACCEPTED_US_STARTUP",
+                "badge": "🇺🇸 US Remote",
+                "badge_color": "#3b82f6",
+                "reason": "US remote position (open to global contractors/applicants)."
+            }
+
+        # 6. Check if UK Startup hiring remotely
+        is_uk = any(u in loc_lower for u in UK_LOCATIONS) or "united kingdom" in loc_lower
+        if is_uk:
+            if has_offshore_signal or ("india" in desc_lower or "nepal" in desc_lower):
+                return {
+                    "is_eligible": True,
+                    "status": "ACCEPTED_UK_STARTUP",
+                    "badge": "🇬🇧 UK Startup (Hires Remote IN/NP)",
+                    "badge_color": "#4f46e5",
+                    "reason": "UK startup actively hiring remote engineers in Nepal & India."
+                }
+            return {
+                "is_eligible": True,
+                "status": "ACCEPTED_UK_STARTUP",
+                "badge": "🇬🇧 UK Startup (Remote IN/NP)",
+                "badge_color": "#6366f1",
+                "reason": "UK startup offering remote role (open to global/contractor applicants in Nepal & India)."
+            }
+
+        # 7. Check for Worldwide / Global Remote signals
         is_worldwide = "worldwide" in loc_lower or "anywhere" in loc_lower or "remote" in loc_lower
         has_positive_global = any(re.search(pat, desc_lower) for pat in POSITIVE_GLOBAL_PATTERNS)
 
@@ -148,13 +234,13 @@ class TargetJobMatcher:
                 "reason": "Global remote position open to developers anywhere in the world."
             }
 
-        # Ambiguous location
+        # 8. Ambiguous/General Remote
         return {
             "is_eligible": True,
-            "status": "CHECK_REQUIRED",
-            "badge": "🌐 Remote (Location Check)",
-            "badge_color": "#64748b",
-            "reason": f"Remote position in {location_str}."
+            "status": "ACCEPTED_GLOBAL",
+            "badge": "🌐 Global Remote",
+            "badge_color": "#0ea5e9",
+            "reason": f"Remote position in {location_str} (open to international applicants)."
         }
 
     @classmethod
@@ -205,16 +291,18 @@ class TargetJobMatcher:
 
         # 3. Geo-Eligibility Boost (up to 15 points)
         geo_score = 0
-        if geo_result.get("status") in ["ACCEPTED_NEPAL", "ACCEPTED_INDIA"]:
+        status = geo_result.get("status")
+        if status in ["ACCEPTED_NEPAL", "ACCEPTED_INDIA", "ACCEPTED_US_STARTUP", "ACCEPTED_UK_STARTUP"]:
             geo_score = 15
-        elif geo_result.get("status") == "ACCEPTED_WORLDWIDE":
-            geo_score = 10
+        elif status == "ACCEPTED_WORLDWIDE":
+            geo_score = 12
+        elif status == "ACCEPTED_GLOBAL":
+            geo_score = 8
         elif not geo_result.get("is_eligible"):
             return 0, [], ["Excluded: Position requires US/local work authorization."]
 
         # 4. Seniority fit (up to 5 points)
         seniority_score = 5
-        # If job is Senior/Lead and candidate is Junior, small adjustment
         if ("senior" in job_title or "lead" in job_title) and profile.get("seniority") == "Junior / Entry-Level":
             seniority_score = 2
 
@@ -235,65 +323,179 @@ class TargetJobMatcher:
         cls,
         profile: Dict[str, Any],
         locations: Optional[List[str]] = None,
+        include_worldwide: bool = True,
+        include_us_startups: bool = True,
+        include_uk_startups: bool = True,
         time_filter: str = "month",
-        max_results: int = 30,
-        min_score: int = 25
+        max_results: int = 35,
+        min_score: int = 20
     ) -> Dict[str, Any]:
         """
         End-to-end pipeline:
         1. Generates targeted queries from candidate profile
-        2. Scrapes LinkedIn for Nepal, India, and Worldwide remote roles
-        3. Filters for geographical eligibility (Nepal & India developers)
+        2. Scrapes LinkedIn across:
+           - Nepal Remote
+           - India Remote
+           - US Startups hiring remotely from Nepal/India
+           - UK Startups hiring remotely from Nepal/India
+           - Worldwide Remote
+        3. Screens for geographical eligibility and startup remote fit
         4. Scores and ranks postings by relevance
         """
-        if not locations:
+        if locations is None:
             locations = ["Nepal", "India"]
 
         queries = cls.generate_targeted_queries(profile)
-        logger.info(f"Generated queries for candidate {profile.get('candidate_name')}: {queries}")
+        primary_q = queries[0] if queries else "Python Developer"
+        secondary_q = queries[1] if len(queries) > 1 else primary_q
+        logger.info(f"Target matching for {profile.get('candidate_name')} with queries: {queries}")
+
+        # Construct specific search channel tasks
+        search_tasks = []
+        channel_labels = []
+
+        # 1. Nepal Remote Channel
+        if any("nepal" in loc.lower() for loc in locations):
+            search_tasks.append(
+                scraper.scrape_jobs_async(
+                    keywords="Python remote",
+                    location="Nepal",
+                    remote_only=True,
+                    time_filter=time_filter,
+                    limit=8,
+                    fetch_details=False
+                )
+            )
+            channel_labels.append("Nepal")
+
+        # 2. India Remote Channel
+        if any("india" in loc.lower() for loc in locations):
+            search_tasks.append(
+                scraper.scrape_jobs_async(
+                    keywords=primary_q,
+                    location="India",
+                    remote_only=True,
+                    time_filter=time_filter,
+                    limit=10,
+                    fetch_details=False
+                )
+            )
+            channel_labels.append("India")
+
+        # 3. US Startups Channel (Hiring Remote IN/NP)
+        if include_us_startups or any("united states" in loc.lower() or "us" in loc.lower() for loc in locations):
+            # Query A: Startup remote in US
+            search_tasks.append(
+                scraper.scrape_jobs_async(
+                    keywords=f"{primary_q} startup remote",
+                    location="United States",
+                    remote_only=True,
+                    time_filter=time_filter,
+                    limit=8,
+                    fetch_details=False
+                )
+            )
+            channel_labels.append("US Startup Remote")
+            # Query B: US remote explicitly hiring India/Nepal
+            search_tasks.append(
+                scraper.scrape_jobs_async(
+                    keywords=f"{primary_q} remote India",
+                    location="United States",
+                    remote_only=True,
+                    time_filter=time_filter,
+                    limit=8,
+                    fetch_details=False
+                )
+            )
+            channel_labels.append("US Hiring India/Nepal")
+
+        # 4. UK Startups Channel (Hiring Remote IN/NP)
+        if include_uk_startups or any("united kingdom" in loc.lower() or "uk" in loc.lower() for loc in locations):
+            search_tasks.append(
+                scraper.scrape_jobs_async(
+                    keywords=f"{primary_q} startup remote",
+                    location="United Kingdom",
+                    remote_only=True,
+                    time_filter=time_filter,
+                    limit=8,
+                    fetch_details=False
+                )
+            )
+            channel_labels.append("UK Startup Remote")
+
+        # 5. Worldwide Remote Channel
+        if include_worldwide or any("worldwide" in loc.lower() for loc in locations):
+            search_tasks.append(
+                scraper.scrape_jobs_async(
+                    keywords=f"{secondary_q} remote",
+                    location="Worldwide",
+                    remote_only=True,
+                    time_filter=time_filter,
+                    limit=8,
+                    fetch_details=False
+                )
+            )
+            channel_labels.append("Worldwide Remote")
+
+        logger.info(f"Dispatching concurrent LinkedIn searches across {len(search_tasks)} channels: {channel_labels}")
+        results = await asyncio.gather(*search_tasks, return_exceptions=True)
 
         scraped_jobs: List[Dict[str, Any]] = []
         seen_ids = set()
 
-        # Scrape concurrently across locations & queries with politeness delays
-        for loc in locations:
-            for q in queries:
-                if len(scraped_jobs) >= max_results * 2:
-                    break
+        for label, batch in zip(channel_labels, results):
+            if isinstance(batch, list):
+                logger.info(f"Channel '{label}' returned {len(batch)} jobs.")
+                for j in batch:
+                    jid = j.get("id") or j.get("job_id")
+                    if jid and jid not in seen_ids:
+                        seen_ids.add(jid)
+                        scraped_jobs.append(j)
+            else:
+                logger.warning(f"Channel '{label}' encountered error: {batch}")
 
-                try:
-                    logger.info(f"Target scraping LinkedIn: query='{q}', location='{loc}', remote=True...")
-                    batch = await scraper.scrape_jobs_async(
-                        keywords=q,
-                        location=loc,
-                        remote_only=True,
-                        time_filter=time_filter,
-                        limit=8,
-                        fetch_details=True
-                    )
-                    for j in batch:
-                        jid = j.get("id") or j.get("job_id")
-                        if jid and jid not in seen_ids:
-                            seen_ids.add(jid)
-                            scraped_jobs.append(j)
+        logger.info(f"Scraped {len(scraped_jobs)} distinct postings across all channels. Enriching details...")
 
-                    # Short politeness sleep between queries
-                    await asyncio.sleep(0.4)
+        # Concurrently fetch detailed job descriptions and criteria for evaluation
+        if scraped_jobs:
+            candidate_skills = [s.lower() for s in profile.get("skills", [])]
+            def prelim_rank(j):
+                t = j.get("title", "").lower()
+                return sum(1 for s in candidate_skills if s in t) + (2 if "python" in t else 0)
 
-                except Exception as e:
-                    logger.warning(f"Error fetching batch '{q}' in '{loc}': {e}")
+            scraped_jobs.sort(key=prelim_rank, reverse=True)
+            jobs_to_enrich = scraped_jobs[:24]
 
-        logger.info(f"Scraped {len(scraped_jobs)} raw candidate jobs. Evaluating and ranking...")
+            sem = asyncio.Semaphore(2)
+            async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=12.0) as client:
+                detail_tasks = [
+                    scraper.fetch_job_detail_async(client, j["job_id"], semaphore=sem)
+                    for j in jobs_to_enrich
+                ]
+                detail_results = await asyncio.gather(*detail_tasks, return_exceptions=True)
+                for job, det in zip(jobs_to_enrich, detail_results):
+                    if isinstance(det, dict) and det.get("description"):
+                        job["description"] = det["description"]
+                        if det.get("excerpt"):
+                            job["excerpt"] = det["excerpt"]
+                        if det.get("tags"):
+                            for t in det["tags"]:
+                                if t not in job["tags"]:
+                                    job["tags"].append(t)
+                        if not job.get("has_salary") and det.get("salary"):
+                            job["salary"] = det["salary"]
+                            job["has_salary"] = True
 
         # Evaluate eligibility and score each job
         ranked_jobs = []
         for j in scraped_jobs:
             geo_eval = cls.evaluate_geo_eligibility(
-                j.get("location", ""),
-                j.get("description", "")
+                location_str=j.get("location", ""),
+                description=j.get("description", ""),
+                title_str=j.get("title", "")
             )
 
-            # Skip restricted jobs
+            # Skip restricted jobs (US/EU only without global remote/contractor options)
             if not geo_eval.get("is_eligible"):
                 continue
 
@@ -313,7 +515,7 @@ class TargetJobMatcher:
         ranked_jobs.sort(key=lambda x: x["match_score"], reverse=True)
         final_jobs = ranked_jobs[:max_results]
 
-        logger.info(f"Successfully matched and ranked {len(final_jobs)} jobs for {profile.get('candidate_name')}.")
+        logger.info(f"Successfully matched and ranked {len(final_jobs)} jobs for {profile.get('candidate_name')} (including US/UK startups).")
 
         return {
             "status": "success",
@@ -321,7 +523,7 @@ class TargetJobMatcher:
             "primary_role": profile.get("primary_role"),
             "skills": profile.get("skills", []),
             "generated_queries": queries,
-            "target_locations": locations,
+            "target_channels": channel_labels,
             "total_matches": len(final_jobs),
             "jobs": final_jobs
         }
