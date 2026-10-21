@@ -1,5 +1,6 @@
 /**
- * RemoteJobPulse - Client Application Logic with AI Resume Matcher
+ * findit. - Client Application Logic with Glass & Gradient UI
+ * Supports Foundit-style Hero & Floating Search + Talentium-style Dashboard & Job Cards
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -7,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const state = {
     query: '',
     provider: 'all',
+    geoRegion: 'all',
     salaryOnly: false,
     sortBy: 'default',
     page: 1,
@@ -15,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     totalPages: 1,
     jobs: [],
     selectedJob: null,
+    bookmarkedIds: new Set(JSON.parse(localStorage.getItem('findit_bookmarks') || '[]')),
 
     // Resume Matching State
     isMatchingMode: false,
@@ -27,7 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements - Main Controls
   const searchInput = document.getElementById('searchInput');
   const clearSearchBtn = document.getElementById('clearSearchBtn');
+  const cardSearchBtn = document.getElementById('cardSearchBtn');
+  const locationFilterInput = document.getElementById('locationFilterInput');
   const providerChips = document.querySelectorAll('#providerFilterGroup .chip');
+  const geoChips = document.querySelectorAll('.geo-chip');
   const salaryToggle = document.getElementById('salaryToggle');
   const sortSelect = document.getElementById('sortSelect');
   const optSortMatch = document.getElementById('optSortMatch');
@@ -37,8 +43,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const activeQueryBadge = document.getElementById('activeQueryBadge');
   const emptyState = document.getElementById('emptyState');
   const resetFiltersBtn = document.getElementById('resetFiltersBtn');
+  const sidebarResetBtn = document.getElementById('sidebarResetBtn');
   const refreshBtn = document.getElementById('refreshBtn');
   const spinIcon = refreshBtn ? refreshBtn.querySelector('.spin-icon') : null;
+
+  // Hero Actions
+  const heroUploadResumeBtn = document.getElementById('heroUploadResumeBtn');
+  const heroTargetGeoBtn = document.getElementById('heroTargetGeoBtn');
+  const quickTags = document.querySelectorAll('.quick-tag');
+  const navLinkResume = document.getElementById('navLinkResume');
+  const navLinkRegions = document.getElementById('navLinkRegions');
 
   // View Switcher Tabs
   const tabBrowseJobs = document.getElementById('tabBrowseJobs');
@@ -72,6 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const resumeModalCloseBtn = document.getElementById('resumeModalCloseBtn');
   const cancelResumeBtn = document.getElementById('cancelResumeBtn');
   const startMatchBtn = document.getElementById('startMatchBtn');
+  const startTargetLinkedInBtn = document.getElementById('startTargetLinkedInBtn');
+  const geoNepal = document.getElementById('geoNepal');
+  const geoIndia = document.getElementById('geoIndia');
+  const geoWorldwide = document.getElementById('geoWorldwide');
   const tabUploadFile = document.getElementById('tabUploadFile');
   const tabPasteText = document.getElementById('tabPasteText');
   const fileUploadSection = document.getElementById('fileUploadSection');
@@ -86,10 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const resumeTextInput = document.getElementById('resumeTextInput');
   const analysisProgress = document.getElementById('analysisProgress');
   const progressStatusText = document.getElementById('progressStatusText');
-  const startTargetLinkedInBtn = document.getElementById('startTargetLinkedInBtn');
-  const geoNepal = document.getElementById('geoNepal');
-  const geoIndia = document.getElementById('geoIndia');
-  const geoWorldwide = document.getElementById('geoWorldwide');
 
   // Job Details Modal Elements
   const jobModal = document.getElementById('jobModal');
@@ -119,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     toastNotification.classList.remove('hidden');
     toastTimeout = setTimeout(() => {
       toastNotification.classList.add('hidden');
-    }, 3000);
+    }, 3200);
   }
 
   // Debounce utility
@@ -158,7 +172,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const data = await response.json();
-      state.jobs = data.jobs || [];
+      let rawJobs = data.jobs || [];
+
+      // Filter by Geo Region if selected in sidebar
+      if (state.geoRegion && state.geoRegion !== 'all') {
+        const g = state.geoRegion.toLowerCase();
+        rawJobs = rawJobs.filter(j => {
+          const loc = (j.location || '').toLowerCase();
+          const desc = (j.description || '').toLowerCase();
+          const badge = (j.geo_badge || '').toLowerCase();
+          return loc.includes(g) || desc.includes(g) || badge.includes(g);
+        });
+      }
+
+      state.jobs = rawJobs;
       state.totalJobs = data.total || 0;
       state.totalPages = data.total_pages || 1;
 
@@ -180,12 +207,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Filter by provider
     if (state.provider && state.provider !== 'all') {
-      dataset = dataset.filter(j => j.source.toLowerCase() === state.provider.toLowerCase());
+      dataset = dataset.filter(j => (j.source || '').toLowerCase() === state.provider.toLowerCase());
     }
 
     // Filter by salary
     if (state.salaryOnly) {
       dataset = dataset.filter(j => j.has_salary);
+    }
+
+    // Filter by Geo Region
+    if (state.geoRegion && state.geoRegion !== 'all') {
+      const g = state.geoRegion.toLowerCase();
+      dataset = dataset.filter(j => {
+        const loc = (j.location || '').toLowerCase();
+        const desc = (j.description || '').toLowerCase();
+        const badge = (j.geo_badge || '').toLowerCase();
+        return loc.includes(g) || desc.includes(g) || badge.includes(g);
+      });
     }
 
     // Filter by search query
@@ -206,9 +244,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (state.sortBy === 'salary') {
       dataset.sort((a, b) => (b.has_salary ? 1 : 0) - (a.has_salary ? 1 : 0));
     } else if (state.sortBy === 'title') {
-      dataset.sort((a, b) => a.title.localeCompare(b.title));
+      dataset.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
     } else if (state.sortBy === 'company') {
-      dataset.sort((a, b) => a.company.localeCompare(b.company));
+      dataset.sort((a, b) => (a.company || '').localeCompare(b.company || ''));
     }
 
     state.totalJobs = dataset.length;
@@ -247,14 +285,14 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (state.sortBy === 'salary') {
       state.jobs.sort((a, b) => (b.has_salary ? 1 : 0) - (a.has_salary ? 1 : 0));
     } else if (state.sortBy === 'title') {
-      state.jobs.sort((a, b) => a.title.localeCompare(b.title));
+      state.jobs.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
     } else if (state.sortBy === 'company') {
-      state.jobs.sort((a, b) => a.company.localeCompare(b.company));
+      state.jobs.sort((a, b) => (a.company || '').localeCompare(b.company || ''));
     }
   }
 
   // ==========================================
-  // Render Jobs
+  // Render Jobs (Talentium Style Grid)
   // ==========================================
   function renderJobs() {
     jobsContainer.innerHTML = '';
@@ -269,9 +307,9 @@ document.addEventListener('DOMContentLoaded', () => {
     emptyState.classList.add('hidden');
 
     if (state.isMatchingMode && state.candidateProfile) {
-      resultsCount.textContent = `🎯 ${state.totalJobs} Personalized Recommendations for ${state.candidateProfile.candidate_name}`;
+      resultsCount.textContent = `🎯 ${state.totalJobs} Recommendations for ${state.candidateProfile.candidate_name}`;
     } else {
-      resultsCount.textContent = `${state.totalJobs} remote positions available`;
+      resultsCount.textContent = `Showing ${state.jobs.length} of ${state.totalJobs} remote positions`;
     }
 
     if (state.query) {
@@ -281,19 +319,72 @@ document.addEventListener('DOMContentLoaded', () => {
       activeQueryBadge.classList.add('hidden');
     }
 
-    state.jobs.forEach(job => {
+    state.jobs.forEach((job, index) => {
+      // After index 2, insert the Talentium-style promo gradient banner card
+      if (index === 2 && !state.isMatchingMode) {
+        const promoCard = createPromoCard();
+        jobsContainer.appendChild(promoCard);
+      }
       const card = createJobCard(job);
       jobsContainer.appendChild(card);
     });
   }
 
+  function createPromoCard() {
+    const card = document.createElement('article');
+    card.className = 'promo-talentium-card';
+    card.innerHTML = `
+      <div>
+        <span class="promo-talentium-tag">Find your dream job</span>
+        <h3 class="promo-talentium-title">Get hired faster with AI Resume Match!</h3>
+        <p class="promo-talentium-desc">Upload your resume to automatically rank jobs with 90%+ skill match and Nepal/India remote eligibility.</p>
+      </div>
+      <div>
+        <button type="button" class="btn-promo-action" id="promoCardUploadBtn">
+          Match My Resume ↗
+        </button>
+      </div>
+    `;
+    const btn = card.querySelector('#promoCardUploadBtn');
+    if (btn) btn.addEventListener('click', openResumeModal);
+    return card;
+  }
+
+  // ==========================================
+  // Talentium Job Card Creation
+  // ==========================================
   function createJobCard(job) {
     const card = document.createElement('article');
     card.className = 'job-card';
-    card.style.setProperty('--card-source-color', job.source_color || '#6366f1');
 
-    const sourceBadgeBg = hexToRgba(job.source_color || '#6366f1', 0.14);
+    // Source pill styling
+    const sourceBadgeBg = hexToRgba(job.source_color || '#6366f1', 0.12);
     const sourceBadgeBorder = hexToRgba(job.source_color || '#6366f1', 0.35);
+
+    // Salary Display (Talentium top-left prominence)
+    let salaryHtml = '';
+    if (job.has_salary && job.salary && job.salary !== 'Not specified') {
+      salaryHtml = `<div class="card-salary-badge text-emerald">${escapeHtml(job.salary)}</div>`;
+    } else {
+      salaryHtml = `<div class="card-salary-badge salary-empty">Competitive</div>`;
+    }
+
+    // Company Logo / Avatar
+    let logoHtml = '';
+    const companyName = job.company || 'Company';
+    if (job.company_logo && job.company_logo.startsWith('http')) {
+      logoHtml = `
+        <div class="company-logo-avatar">
+          <img src="${escapeHtml(job.company_logo)}" class="company-logo-img" alt="${escapeHtml(companyName)}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=\\'company-logo-initials\\'>${getInitials(companyName)}</span>'">
+        </div>
+      `;
+    } else {
+      logoHtml = `
+        <div class="company-logo-avatar">
+          <span class="company-logo-initials">${getInitials(companyName)}</span>
+        </div>
+      `;
+    }
 
     // Match Score Badge HTML
     let matchScoreHtml = '';
@@ -311,26 +402,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (job.geo_badge) {
       const gColor = job.geo_badge_color || '#10b981';
       geoBadgeHtml = `
-        <span class="source-badge" style="background:${hexToRgba(gColor, 0.14)}; border:1px solid ${hexToRgba(gColor, 0.4)}; color:${gColor}; font-size: 0.725rem; font-weight: 700;">
+        <span class="geo-badge-tag" style="background:${hexToRgba(gColor, 0.12)}; border:1px solid ${hexToRgba(gColor, 0.35)}; color:${gColor};">
           ${escapeHtml(job.geo_badge)}
         </span>
       `;
     }
 
-    // Match Fit Box (Why you match)
+    // Fit Reason Box (when matched)
     let fitBoxHtml = '';
     if (job.fit_reasons && job.fit_reasons.length > 0) {
       fitBoxHtml = `
         <div class="card-fit-box">
-          <div class="fit-reason-text">
-            <span class="fit-check">✓</span>
-            <span>${escapeHtml(job.fit_reasons[0])}</span>
-          </div>
+          <span>✓</span>
+          <span>${escapeHtml(job.fit_reasons[0])}</span>
         </div>
       `;
     }
 
-    // Tags markup (highlight matched candidate skills)
+    // Tags row with matched candidate skills prioritization
     const candidateSkillsLower = state.candidateProfile ? new Set(state.candidateProfile.skills.map(s => s.toLowerCase())) : new Set();
     const matchedSkillsSet = new Set((job.matched_skills || []).map(s => s.toLowerCase()));
     
@@ -338,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
     (job.matched_skills || []).slice(0, 4).forEach(s => displayTags.push({ text: s, isMatched: true }));
     (job.tags || []).forEach(t => {
       const isM = candidateSkillsLower.has(String(t).toLowerCase()) || matchedSkillsSet.has(String(t).toLowerCase());
-      if (!displayTags.some(dt => dt.text.toLowerCase() === String(t).toLowerCase()) && displayTags.length < 6) {
+      if (!displayTags.some(dt => dt.text.toLowerCase() === String(t).toLowerCase()) && displayTags.length < 5) {
         displayTags.push({ text: String(t), isMatched: isM });
       }
     });
@@ -350,67 +439,102 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .join('');
 
+    const isBookmarked = state.bookmarkedIds.has(job.id);
+
     card.innerHTML = `
       <div>
-        <div class="card-top">
-          <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+        <!-- Talentium Top Row: Salary on Left, Logo + Source on Right -->
+        <div class="card-talentium-top">
+          ${salaryHtml}
+          <div class="card-company-logo-wrap">
             <div class="source-badge" style="background:${sourceBadgeBg}; border:1px solid ${sourceBadgeBorder}; color:${job.source_color}">
               <span class="source-badge-dot"></span>
               ${escapeHtml(job.source)}
             </div>
+            ${logoHtml}
+          </div>
+        </div>
+
+        <!-- Role Title & Company Subtitle -->
+        <div class="card-talentium-body">
+          <h3 class="job-role-title" title="${escapeHtml(job.title)}">${escapeHtml(job.title)}</h3>
+          <div class="job-company-subtitle">
+            <span>${escapeHtml(companyName)}</span>
+            <span class="company-dot-separator">•</span>
+            <span>📍 ${escapeHtml(job.location || 'Remote')}</span>
+            <span class="company-dot-separator">•</span>
+            <span>⏱️ ${formatDate(job.date)}</span>
+          </div>
+
+          <!-- Badges: Regional Geo & Match Score -->
+          <div class="card-badges-row">
             ${geoBadgeHtml}
             ${matchScoreHtml}
           </div>
-          <span class="meta-pill" style="font-size:0.75rem; color:var(--text-muted);">
-            ${formatDate(job.date)}
-          </span>
+
+          ${fitBoxHtml}
+
+          <p class="job-excerpt-text">${escapeHtml(job.excerpt || '')}</p>
         </div>
-
-        <div class="company-title-wrap">
-          <div class="job-company">${escapeHtml(job.company || 'Unknown Company')}</div>
-          <h3 class="job-title" title="${escapeHtml(job.title)}">${escapeHtml(job.title)}</h3>
-        </div>
-
-        <div class="card-meta-row" style="margin: 0.85rem 0;">
-          <span class="meta-pill">
-            <span>📍</span> ${escapeHtml(job.location || 'Remote')}
-          </span>
-          ${job.has_salary ? `
-            <span class="salary-pill">
-              <span>💰</span> ${escapeHtml(job.salary)}
-            </span>
-          ` : ''}
-        </div>
-
-        ${fitBoxHtml}
-
-        <p class="job-excerpt">${escapeHtml(job.excerpt || '')}</p>
       </div>
 
       <div>
-        <div class="job-tags-row" style="margin-bottom: 0.85rem;">
+        <!-- Tags Row -->
+        <div class="card-tags-row">
           ${tagsHtml}
         </div>
 
-        <div class="card-actions-row">
-          <button class="btn btn-secondary view-details-btn" data-job-id="${escapeHtml(job.id)}">
+        <!-- Talentium Action Row: Solid Black Pill "Apply now" + Quick View + Heart -->
+        <div class="card-talentium-actions">
+          <a href="${escapeHtml(job.apply_url || '#')}" target="_blank" rel="noopener noreferrer" class="btn-talentium-apply">
+            Apply now ↗
+          </a>
+          <button type="button" class="btn-quick-view view-details-btn" data-job-id="${escapeHtml(job.id)}">
             Quick View
           </button>
-          <a href="${escapeHtml(job.apply_url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="text-decoration:none;">
-            Apply ↗
-          </a>
+          <button type="button" class="btn-bookmark ${isBookmarked ? 'bookmarked' : ''}" aria-label="Bookmark job" title="Save job">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="${isBookmarked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+          </button>
         </div>
       </div>
     `;
 
     // Click events
     const viewBtn = card.querySelector('.view-details-btn');
-    const titleBtn = card.querySelector('.job-title');
+    const titleBtn = card.querySelector('.job-role-title');
+    const bookmarkBtn = card.querySelector('.btn-bookmark');
 
     viewBtn.addEventListener('click', () => openJobModal(job));
     titleBtn.addEventListener('click', () => openJobModal(job));
 
+    bookmarkBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (state.bookmarkedIds.has(job.id)) {
+        state.bookmarkedIds.delete(job.id);
+        bookmarkBtn.classList.remove('bookmarked');
+        bookmarkBtn.querySelector('svg').setAttribute('fill', 'none');
+        showToast('Job removed from saved list');
+      } else {
+        state.bookmarkedIds.add(job.id);
+        bookmarkBtn.classList.add('bookmarked');
+        bookmarkBtn.querySelector('svg').setAttribute('fill', 'currentColor');
+        showToast('Job saved to your bookmarks ❤️');
+      }
+      localStorage.setItem('findit_bookmarks', JSON.stringify([...state.bookmarkedIds]));
+    });
+
     return card;
+  }
+
+  function getInitials(name) {
+    if (!name) return 'CO';
+    const words = name.trim().split(/\s+/);
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
   }
 
   function openJobModal(job) {
@@ -430,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Match Highlight in modal
     if (job.match_score !== undefined) {
       modalMatchBanner.classList.remove('hidden');
-      modalMatchScore.textContent = `${job.match_score}% Match • ${job.match_grade || 'High Alignment'}`;
+      modalMatchScore.textContent = `${job.match_score}% Match • High Alignment`;
       if (job.fit_reasons && job.fit_reasons.length > 0) {
         modalMatchReasons.innerHTML = job.fit_reasons
           .map(r => `<div>✔ ${escapeHtml(r)}</div>`)
@@ -448,28 +572,32 @@ document.addEventListener('DOMContentLoaded', () => {
       .join('');
 
     // Description
-    if (job.description) {
-      modalJobDescription.innerHTML = sanitizeJobHtml(job.description);
+    if (job.description && job.description.length > 50) {
+      modalJobDescription.innerHTML = sanitizeHtml(job.description);
     } else {
-      modalJobDescription.textContent = job.excerpt || 'No description provided.';
+      modalJobDescription.textContent = job.excerpt || 'No additional description provided. Click Apply to view full listing.';
     }
 
     modalApplyBtn.href = job.apply_url || '#';
 
-    if (typeof jobModal.showModal === 'function') {
-      jobModal.showModal();
-    } else {
-      jobModal.setAttribute('open', 'true');
-    }
+    jobModal.showModal();
+    document.body.style.overflow = 'hidden';
   }
 
   function closeJobModal() {
-    if (typeof jobModal.close === 'function') {
-      jobModal.close();
-    } else {
-      jobModal.removeAttribute('open');
-    }
-    state.selectedJob = null;
+    jobModal.close();
+    document.body.style.overflow = '';
+  }
+
+  function openResumeModal() {
+    resumeUploadModal.showModal();
+    document.body.style.overflow = 'hidden';
+    updateStartButtonState();
+  }
+
+  function closeResumeModal() {
+    resumeUploadModal.close();
+    document.body.style.overflow = '';
   }
 
   function renderPagination() {
@@ -484,29 +612,85 @@ document.addEventListener('DOMContentLoaded', () => {
     nextPageBtn.disabled = state.page >= state.totalPages;
   }
 
-  // ==========================================
-  // Resume Upload & Matching Handlers
-  // ==========================================
-  function openResumeModal() {
-    if (typeof resumeUploadModal.showModal === 'function') {
-      resumeUploadModal.showModal();
-    } else {
-      resumeUploadModal.setAttribute('open', 'true');
+  // Utilities
+  function hexToRgba(hex, alpha = 1) {
+    if (!hex || !hex.startsWith('#')) return `rgba(99, 102, 241, ${alpha})`;
+    let c = hex.substring(1);
+    if (c.length === 3) c = c.split('').map(x => x + x).join('');
+    const num = parseInt(c, 16);
+    return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
+  }
+
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function sanitizeHtml(raw) {
+    if (!raw) return '';
+    return raw
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
+  }
+
+  function formatDate(d) {
+    if (!d) return 'Recently';
+    try {
+      const date = new Date(d);
+      if (isNaN(date.getTime())) return 'Recently';
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    } catch {
+      return 'Recently';
     }
   }
 
-  function closeResumeModal() {
-    if (typeof resumeUploadModal.close === 'function') {
-      resumeUploadModal.close();
-    } else {
-      resumeUploadModal.removeAttribute('open');
-    }
-    analysisProgress.classList.add('hidden');
-  }
-
+  // ==========================================
+  // Event Listeners
+  // ==========================================
+  
   // Header & Tab triggers
-  headerResumeBtn.addEventListener('click', openResumeModal);
+  if (headerResumeBtn) headerResumeBtn.addEventListener('click', openResumeModal);
+  if (heroUploadResumeBtn) heroUploadResumeBtn.addEventListener('click', openResumeModal);
   if (reuploadResumeBtn) reuploadResumeBtn.addEventListener('click', openResumeModal);
+  if (navLinkResume) navLinkResume.addEventListener('click', (e) => {
+    e.preventDefault();
+    openResumeModal();
+  });
+
+  // Hero Target Geo button
+  if (heroTargetGeoBtn) {
+    heroTargetGeoBtn.addEventListener('click', () => {
+      state.geoRegion = 'Nepal';
+      geoChips.forEach(c => c.classList.toggle('active', c.dataset.geo === 'Nepal'));
+      const section = document.getElementById('exploreJobsSection');
+      if (section) section.scrollIntoView({ behavior: 'smooth' });
+      loadJobs();
+    });
+  }
+
+  if (navLinkRegions) {
+    navLinkRegions.addEventListener('click', (e) => {
+      e.preventDefault();
+      state.geoRegion = 'Nepal';
+      geoChips.forEach(c => c.classList.toggle('active', c.dataset.geo === 'Nepal'));
+      const section = document.getElementById('exploreJobsSection');
+      if (section) section.scrollIntoView({ behavior: 'smooth' });
+      loadJobs();
+    });
+  }
 
   tabResumeMatch.addEventListener('click', () => {
     tabBrowseJobs.classList.remove('active');
@@ -599,7 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   resumeTextInput.addEventListener('input', updateStartButtonState);
 
-  // Submit Resume for Matching
+  // Standard Match (All Sources)
   startMatchBtn.addEventListener('click', async () => {
     analysisProgress.classList.remove('hidden');
     progressStatusText.textContent = 'Parsing resume and extracting skills & experience...';
@@ -652,8 +836,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error(err);
       showToast(`Error: ${err.message}`);
+    } finally {
       analysisProgress.classList.add('hidden');
-      startMatchBtn.disabled = false;
+      updateStartButtonState();
     }
   });
 
@@ -759,59 +944,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadJobs();
   }
 
-  if (clearResumeBtn) {
-    clearResumeBtn.addEventListener('click', () => {
-      resetResumeMode();
-      showToast('Switched back to all live jobs.');
-    });
-  }
-
-  // ==========================================
-  // General Helpers & Listeners
-  // ==========================================
-  function formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  }
-
-  function hexToRgba(hex, alpha = 1) {
-    if (!hex || !hex.startsWith('#')) return `rgba(99, 102, 241, ${alpha})`;
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  function sanitizeJobHtml(raw) {
-    if (!raw) return '';
-    return raw
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
-  }
-
-  function formatDate(d) {
-    if (!d) return 'Recently';
-    try {
-      const date = new Date(d);
-      if (isNaN(date.getTime())) return 'Recently';
-      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    } catch {
-      return 'Recently';
-    }
-  }
+  clearResumeBtn.addEventListener('click', resetResumeMode);
 
   // Search input with debounce
   const debouncedSearch = debounce(val => {
@@ -833,6 +966,42 @@ document.addEventListener('DOMContentLoaded', () => {
     state.page = 1;
     loadJobs();
     searchInput.focus();
+  });
+
+  if (cardSearchBtn) {
+    cardSearchBtn.addEventListener('click', () => {
+      const val = searchInput.value.trim();
+      state.query = val;
+      state.page = 1;
+      const section = document.getElementById('exploreJobsSection');
+      if (section) section.scrollIntoView({ behavior: 'smooth' });
+      loadJobs();
+    });
+  }
+
+  // Popular quick tags click handler
+  quickTags.forEach(tag => {
+    tag.addEventListener('click', () => {
+      const q = tag.dataset.query;
+      searchInput.value = q;
+      clearSearchBtn.classList.remove('hidden');
+      state.query = q;
+      state.page = 1;
+      const section = document.getElementById('exploreJobsSection');
+      if (section) section.scrollIntoView({ behavior: 'smooth' });
+      loadJobs();
+    });
+  });
+
+  // Geo Chips (Sidebar)
+  geoChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      geoChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.geoRegion = chip.dataset.geo;
+      state.page = 1;
+      loadJobs();
+    });
   });
 
   // Keyboard shortcut: '/' to focus search, 'Escape' to close modal
@@ -881,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshBtn.addEventListener('click', async () => {
       if (spinIcon) spinIcon.classList.add('spinning');
       refreshBtn.disabled = true;
-      showToast('Syncing all 5 live job feeds...');
+      showToast('Syncing all 6 live job feeds...');
       await loadJobs(true);
       if (spinIcon) spinIcon.classList.remove('spinning');
       refreshBtn.disabled = false;
@@ -889,25 +1058,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Reset Filters
-  resetFiltersBtn.addEventListener('click', () => {
+  // Reset Filters (Main & Sidebar)
+  function resetAllFilters() {
     state.query = '';
     state.provider = 'all';
+    state.geoRegion = 'all';
     state.salaryOnly = false;
     state.page = 1;
     searchInput.value = '';
     clearSearchBtn.classList.add('hidden');
     salaryToggle.checked = false;
     providerChips.forEach(c => c.classList.toggle('active', c.dataset.provider === 'all'));
+    geoChips.forEach(c => c.classList.toggle('active', c.dataset.geo === 'all'));
     loadJobs();
-  });
+    showToast('Filters reset to default');
+  }
+
+  if (resetFiltersBtn) resetFiltersBtn.addEventListener('click', resetAllFilters);
+  if (sidebarResetBtn) sidebarResetBtn.addEventListener('click', resetAllFilters);
 
   // Pagination
   prevPageBtn.addEventListener('click', () => {
     if (state.page > 1) {
       state.page--;
       loadJobs();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 400, behavior: 'smooth' });
     }
   });
 
@@ -915,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.page < state.totalPages) {
       state.page++;
       loadJobs();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 400, behavior: 'smooth' });
     }
   });
 
