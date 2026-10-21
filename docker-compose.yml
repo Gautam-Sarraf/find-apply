@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  job-pulse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: remote-job-pulse
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount current directory for development hot-reloading
+      - .:/app
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RemoteJobPulse | Multi-Source Remote Jobs & Smart Resume Matcher</title>
+  <meta name="description" content="Discover verified remote jobs aggregated from 5 live platforms and instantly rank the best roles matching your resume, skills, and years of experience.">
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow glow-top-left" aria-hidden="true"></div>
+  <div class="ambient-glow glow-top-right" aria-hidden="true"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-group">
+        <div class="brand-logo" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1"></path>
+            <path d="M18 8h4a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-4"></path>
+            <circle cx="8" cy="12" r="2"></circle>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-title">RemoteJob<span>Pulse</span></h1>
+          <p class="brand-tagline">5 Free Live Sources • Instant Resume Matching</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Resume Upload Trigger Button in Header -->
+        <button id="headerResumeBtn" class="btn btn-primary btn-resume-cta">
+          <span class="btn-sparkle">📄✨</span>
+          <span>Upload Resume & Match</span>
+        </button>
+
+        <div class="live-status-pill" id="liveStatusBadge">
+          <span class="pulse-dot"></span>
+          <span id="statusText">Live Aggregator Active</span>
+        </div>
+        <button id="refreshBtn" class="btn btn-secondary btn-icon" title="Refresh Live Feeds">
+          <svg class="spin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          <span class="btn-label">Sync Feeds</span>
+        </button>
+        <a href="/docs" target="_blank" class="btn btn-ghost" title="View Swagger API Documentation">
+          API Docs
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="main-content">
+    
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-badge">
+        <span class="badge-sparkle">✦</span>
+        <span>AI-powered career analysis & cross-platform remote aggregation</span>
+      </div>
+      <h2 class="hero-title">Find remote jobs that fit your exact expertise</h2>
+      <p class="hero-subtitle">Upload your resume to automatically extract your skills, years of experience, and rank top jobs across LinkedIn, RemoteOK, Himalayas, Arbeitnow, Jobicy, and Remotive.</p>
+
+      <!-- View Switcher Tabs -->
+      <div class="view-switcher-tabs" role="tablist">
+        <button class="view-tab active" id="tabBrowseJobs" role="tab" aria-selected="true">
+          <span>🔍</span> Browse All Jobs
+        </button>
+        <button class="view-tab" id="tabResumeMatch" role="tab" aria-selected="false">
+          <span>⚡</span> Resume Matcher
+        </button>
+      </div>
+
+      <!-- Search & Controls Bar -->
+      <div class="search-box-card" id="searchControlsCard">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="Search by role, stack (Python, React), company, or keyword... (Press / to focus)" 
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button id="clearSearchBtn" class="clear-btn hidden" aria-label="Clear search input">✕</button>
+          <div class="search-kbd-hint" aria-hidden="true">/</div>
+        </div>
+
+        <div class="filter-controls-row">
+          <!-- Provider Filter Tabs -->
+          <div class="provider-chips" id="providerFilterGroup" role="radiogroup" aria-label="Filter by provider">
+            <button class="chip active" data-provider="all">All Sources</button>
+            <button class="chip" data-provider="RemoteOK">RemoteOK</button>
+            <button class="chip" data-provider="Himalayas">Himalayas</button>
+            <button class="chip" data-provider="Arbeitnow">Arbeitnow</button>
+            <button class="chip" data-provider="Jobicy">Jobicy</button>
+            <button class="chip" data-provider="Remotive">Remotive</button>
+            <button class="chip" data-provider="LinkedIn">LinkedIn</button>
+          </div>
+
+          <!-- Toggles -->
+          <div class="toggles-group">
+            <label class="toggle-control" id="salaryToggleLabel">
+              <input type="checkbox" id="salaryToggle">
+              <span class="toggle-slider"></span>
+              <span class="toggle-text">Disclosed Salary Only</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Active Resume Profile Ribbon (Shown when a resume is analyzed) -->
+    <section class="candidate-ribbon hidden" id="candidateRibbon">
+      <div class="ribbon-card">
+        <div class="ribbon-header">
+          <div class="ribbon-profile-info">
+            <div class="candidate-avatar" id="ribbonAvatar">JD</div>
+            <div>
+              <div class="candidate-name-row">
+                <h3 class="candidate-name" id="ribbonName">Candidate Name</h3>
+                <span class="candidate-exp-badge" id="ribbonExpBadge">6+ Years Exp • Senior</span>
+                <span class="match-mode-indicator">🎯 Personalized Match Active</span>
+              </div>
+              <p class="candidate-role" id="ribbonRole">Senior Full Stack Engineer</p>
+            </div>
+          </div>
+          <div class="ribbon-actions">
+            <button class="btn btn-secondary btn-sm" id="reuploadResumeBtn">Change Resume</button>
+            <button class="btn btn-ghost btn-sm" id="clearResumeBtn">Reset to All Jobs</button>
+          </div>
+        </div>
+
+        <!-- Detected Skills Cloud -->
+        <div class="ribbon-skills-section">
+          <span class="skills-label">Detected Skills:</span>
+          <div class="ribbon-skills-list" id="ribbonSkillsList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Metrics Stats Banner -->
+    <section class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <span class="stat-label">Active Listings</span>
+        <div class="stat-value" id="statTotalJobs">--</div>
+        <span class="stat-meta">Across 5 live endpoints</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Salary Transparency</span>
+        <div class="stat-value" id="statSalaryCount">--</div>
+        <span class="stat-meta">Includes explicit ranges</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Verified Remote</span>
+        <div class="stat-value text-emerald">100%</div>
+        <span class="stat-meta">Worldwide / Geo-distributed</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Last Synced</span>
+        <div class="stat-value stat-small" id="statLastSync">Just now</div>
+        <span class="stat-meta" id="statCacheAge">Instant cached response</span>
+      </div>
+    </section>
+
+    <!-- Results Header -->
+    <div class="results-header">
+      <div class="results-count-group">
+        <span class="results-count" id="resultsCount">Loading jobs...</span>
+        <span class="active-query-tag hidden" id="activeQueryBadge"></span>
+      </div>
+      <div class="results-sort">
+        <label for="sortSelect" class="sr-only">Sort jobs by</label>
+        <select id="sortSelect" class="select-dropdown">
+          <option value="default" id="optSortDefault">Sort: Default (Featured)</option>
+          <option value="match" id="optSortMatch" class="hidden">Sort: Best Match % First</option>
+          <option value="salary">Sort: Highest Salary First</option>
+          <option value="title">Sort: Job Title (A-Z)</option>
+          <option value="company">Sort: Company Name (A-Z)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Job Cards Grid -->
+    <div class="job-cards-grid" id="jobsContainer">
+      <!-- Loading Skeletons rendered initially -->
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="pagination-container hidden" id="paginationContainer">
+      <button class="btn btn-secondary" id="prevPageBtn" disabled>← Previous</button>
+      <span class="page-indicator" id="pageIndicator">Page 1 of 1</span>
+      <button class="btn btn-secondary" id="nextPageBtn">Next →</button>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state hidden" id="emptyState">
+      <div class="empty-state-icon">🔍</div>
+      <h3 class="empty-state-title">No matching positions found</h3>
+      <p class="empty-state-desc">Try clearing your search term, switching provider tabs, or uploading your resume for automated matching.</p>
+      <button class="btn btn-primary" id="resetFiltersBtn">Reset All Filters</button>
+    </div>
+  </main>
+
+  <!-- Resume Upload & Match Modal (Native HTML5 Dialog) -->
+  <dialog class="job-modal" id="resumeUploadModal">
+    <div class="modal-card modal-card-upload">
+      <div class="modal-header">
+        <div class="modal-title-with-icon">
+          <div class="upload-icon-badge">📄</div>
+          <div>
+            <h2 class="modal-heading">Smart Resume Matcher</h2>
+            <p class="modal-subheading">Analyze your experience & skills to rank the top matching remote jobs</p>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="resumeModalCloseBtn" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Input Method Tabs -->
+        <div class="upload-tabs" role="tablist">
+          <button class="upload-tab active" id="tabUploadFile" type="button">Upload Document (PDF / DOCX)</button>
+          <button class="upload-tab" id="tabPasteText" type="button">Paste Resume Text</button>
+        </div>
+
+        <!-- File Upload Form View -->
+        <div id="fileUploadSection">
+          <div class="drop-zone" id="dropZone">
+            <input type="file" id="resumeFileInput" accept=".pdf,.docx,.doc,.txt" class="drop-zone-input">
+            <div class="drop-zone-content">
+              <div class="drop-icon">☁️</div>
+              <h3 class="drop-title">Drag & drop your resume here</h3>
+              <p class="drop-subtitle">Supports <strong>PDF</strong>, <strong>DOCX</strong>, and <strong>TXT</strong> files up to 10MB</p>
+              <button type="button" class="btn btn-secondary btn-sm" id="browseFileBtn">Browse Files</button>
+            </div>
+          </div>
+
+          <!-- Selected File Pill -->
+          <div class="selected-file-card hidden" id="selectedFileCard">
+            <div class="file-info-group">
+              <span class="file-icon">📑</span>
+              <div>
+                <div class="file-name" id="selectedFileName">resume.pdf</div>
+                <div class="file-size" id="selectedFileSize">240 KB</div>
+              </div>
+            </div>
+            <button type="button" class="remove-file-btn" id="removeFileBtn" title="Remove file">✕</button>
+          </div>
+        </div>
+
+        <!-- Paste Text View -->
+        <div id="pasteTextSection" class="hidden">
+          <textarea 
+            id="resumeTextInput" 
+            class="resume-textarea" 
+            placeholder="Paste your resume text here (Summary, Experience, Skills, Education)..."
+            rows="8"
+          ></textarea>
+        </div>
+
+        <!-- Personal Targeting Options: Nepal & India Remote Focus -->
+        <div class="target-geo-options" style="margin-top: 1.25rem; padding: 1rem; border-radius: var(--radius-md); background: rgba(10, 102, 194, 0.06); border: 1px solid rgba(10, 102, 194, 0.2);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+            <div style="font-weight: 700; color: #0a66c2; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem;">
+              <span>🎯</span> Target Regions: Remote for Nepal & India
+            </div>
+            <span style="font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 0.15rem 0.5rem; border-radius: 9999px; font-weight: 600;">Geo-Screened</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+            Scrapes live LinkedIn remote roles tailored to your exact skills and verified to accept developers in Nepal & India (filtering out US/EU-only restrictions).
+          </p>
+          <div style="display: flex; gap: 0.85rem; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+              <input type="checkbox" id="geoNepal" checked> 🇳🇵 Nepal Remote
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+              <input type="checkbox" id="geoIndia" checked> 🇮🇳 India Remote
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+              <input type="checkbox" id="geoWorldwide" checked> 🌍 Worldwide Remote
+            </label>
+          </div>
+        </div>
+
+        <!-- Analysis Progress Overlay (Hidden by default) -->
+        <div class="analysis-progress hidden" id="analysisProgress">
+          <div class="progress-spinner"></div>
+          <div class="progress-text" id="progressStatusText">Extracting skills and analyzing experience...</div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <button type="button" class="btn btn-secondary" id="cancelResumeBtn">Cancel</button>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary" id="startMatchBtn" disabled>
+            <span>⚡ All Sources</span>
+          </button>
+          <button type="button" class="btn btn-primary" id="startTargetLinkedInBtn" style="background: linear-gradient(135deg, #0a66c2 0%, #004182 100%); border: none;" disabled>
+            <span>🎯 Match LinkedIn (Nepal & India)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Job Details Modal (Native HTML5 Dialog) -->
+  <dialog class="job-modal" id="jobModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-source-pill" id="modalSourceBadge">Source</div>
+        <button class="modal-close-btn" id="modalCloseBtn" aria-label="Close details">✕</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="modal-title-group">
+          <h2 class="modal-job-title" id="modalJobTitle">Job Title</h2>
+          <p class="modal-job-company" id="modalJobCompany">Company Name</p>
+        </div>
+
+        <!-- Match Highlight Banner if matched -->
+        <div class="modal-match-banner hidden" id="modalMatchBanner">
+          <div class="match-score-pill" id="modalMatchScore">92% Match</div>
+          <div class="match-reasons-list" id="modalMatchReasons"></div>
+        </div>
+
+        <div class="modal-meta-grid">
+          <div class="modal-meta-item">
+            <span class="meta-icon">📍</span>
+            <div>
+              <div class="meta-label">Location</div>
+              <div class="meta-val" id="modalJobLocation">Worldwide</div>
+            </div>
+          </div>
+          <div class="modal-meta-item">
+            <span class="meta-icon">💰</span>
+            <div>
+              <div class="meta-label">Compensation</div>
+              <div class="meta-val" id="modalJobSalary">Not specified</div>
+            </div>
+          </div>
+          <div class="modal-meta-item">
+            <span class="meta-icon">🗓️</span>
+            <div>
+              <div class="meta-label">Posted Date</div>
+              <div class="meta-val" id="modalJobDate">Recently</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-tags-container" id="modalJobTags"></div>
+
+        <div class="modal-description-section">
+          <h3 class="section-title">Job Description</h3>
+          <div class="modal-description-content" id="modalJobDescription"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modalCopyBtn">
+          <span>📋</span> Copy Link
+        </button>
+        <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-apply" id="modalApplyBtn">
+          <span>Apply Directly on Source</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 17l9.2-9.2M17 17V7H7"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Floating Toast Notification -->
+  <div class="toast-notification hidden" id="toastNotification" role="alert">
+    <span class="toast-icon">✓</span>
+    <span class="toast-message" id="toastMessage">Action completed</span>
+  </div>
+
+  <footer class="app-footer">
+    <div class="footer-container">
+      <p>RemoteJobPulse Engine • Aggregating live endpoints: LinkedIn, RemoteOK, Himalayas, Arbeitnow, Jobicy, and Remotive.</p>
+      <p class="footer-credits">Resume parsing and candidate matching run locally with zero cloud vendor lock-in.</p>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
