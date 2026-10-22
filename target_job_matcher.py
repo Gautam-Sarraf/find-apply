@@ -145,7 +145,7 @@ class TargetJobMatcher:
                     return {
                         "is_eligible": False,
                         "status": "RESTRICTED",
-                        "badge": "🚫 Restricted (US/EU Only)",
+                        "badge": "Restricted (US/EU Only)",
                         "badge_color": "#ef4444",
                         "reason": "Requires US/EU work authorization or strict local residency."
                     }
@@ -156,7 +156,7 @@ class TargetJobMatcher:
             return {
                 "is_eligible": True,
                 "status": "ACCEPTED_NEPAL",
-                "badge": "🇳🇵 Nepal Remote",
+                "badge": "Nepal Remote",
                 "badge_color": "#10b981",
                 "reason": "Remote position based in Nepal - Directly hires Nepali developers."
             }
@@ -167,7 +167,7 @@ class TargetJobMatcher:
             return {
                 "is_eligible": True,
                 "status": "ACCEPTED_INDIA",
-                "badge": "🇮🇳 India Remote",
+                "badge": "India Remote",
                 "badge_color": "#06b6d4",
                 "reason": "Remote position based in India - Directly hires Indian/Nepali developers."
             }
@@ -181,7 +181,7 @@ class TargetJobMatcher:
                 return {
                     "is_eligible": True,
                     "status": "ACCEPTED_US_STARTUP",
-                    "badge": "🇺🇸 US Startup (Hires Remote IN/NP)",
+                    "badge": "US Startup • Remote IN/NP",
                     "badge_color": "#2563eb",
                     "reason": "US startup actively hiring remote engineers in Nepal & India."
                 }
@@ -189,7 +189,7 @@ class TargetJobMatcher:
                 return {
                     "is_eligible": True,
                     "status": "ACCEPTED_US_STARTUP",
-                    "badge": "🇺🇸 US Startup (Remote IN/NP)",
+                    "badge": "US Startup • Global Remote",
                     "badge_color": "#3b82f6",
                     "reason": "US-based startup offering remote role (open to global/contractor applicants in Nepal & India)."
                 }
@@ -197,7 +197,7 @@ class TargetJobMatcher:
             return {
                 "is_eligible": True,
                 "status": "ACCEPTED_US_STARTUP",
-                "badge": "🇺🇸 US Remote",
+                "badge": "US Remote",
                 "badge_color": "#3b82f6",
                 "reason": "US remote position (open to global contractors/applicants)."
             }
@@ -209,14 +209,14 @@ class TargetJobMatcher:
                 return {
                     "is_eligible": True,
                     "status": "ACCEPTED_UK_STARTUP",
-                    "badge": "🇬🇧 UK Startup (Hires Remote IN/NP)",
+                    "badge": "UK Startup • Remote IN/NP",
                     "badge_color": "#4f46e5",
                     "reason": "UK startup actively hiring remote engineers in Nepal & India."
                 }
             return {
                 "is_eligible": True,
                 "status": "ACCEPTED_UK_STARTUP",
-                "badge": "🇬🇧 UK Startup (Remote IN/NP)",
+                "badge": "UK Startup • Global Remote",
                 "badge_color": "#6366f1",
                 "reason": "UK startup offering remote role (open to global/contractor applicants in Nepal & India)."
             }
@@ -229,7 +229,7 @@ class TargetJobMatcher:
             return {
                 "is_eligible": True,
                 "status": "ACCEPTED_WORLDWIDE",
-                "badge": "🌍 Worldwide Remote (Accepts IN/NP)",
+                "badge": "Worldwide Remote",
                 "badge_color": "#8b5cf6",
                 "reason": "Global remote position open to developers anywhere in the world."
             }
@@ -238,7 +238,7 @@ class TargetJobMatcher:
         return {
             "is_eligible": True,
             "status": "ACCEPTED_GLOBAL",
-            "badge": "🌐 Global Remote",
+            "badge": "Global Remote",
             "badge_color": "#0ea5e9",
             "reason": f"Remote position in {location_str} (open to international applicants)."
         }
@@ -556,7 +556,7 @@ def main():
         locs.append("Worldwide")
 
     print(f"\n========================================================")
-    print(f"🎯 Targeted Remote LinkedIn Matcher for Nepal & India")
+    print(f"Targeted Remote LinkedIn Matcher for Nepal & India")
     print(f"========================================================")
     print(f"Candidate:  {profile.get('candidate_name')} ({profile.get('seniority')})")
     print(f"Role:       {profile.get('primary_role')}")
@@ -573,9 +573,9 @@ def main():
         )
     )
 
-    print(f"✅ Found {result['total_matches']} matching postings for {profile.get('candidate_name')}:\n")
+    print(f"Found {result['total_matches']} matching postings for {profile.get('candidate_name')}:\n")
     for i, j in enumerate(result["jobs"], 1):
-        sal = f" | 💰 {j['salary']}" if j.get("has_salary") else ""
+        sal = f" | {j['salary']}" if j.get("has_salary") else ""
         print(f"[{i:02d}] {j['match_score']}% FIT | {j['geo_badge']}")
         print(f"     Title:   {j['title']} @ {j['company']}")
         print(f"     Location: {j['location']}{sal}")
@@ -589,7 +589,7 @@ def main():
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
-        print(f"📁 Results exported to: {args.output}\n")
+        print(f"Results exported to: {args.output}\n")
 
 
 if __name__ == "__main__":

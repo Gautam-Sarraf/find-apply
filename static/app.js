@@ -185,10 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const badge = (j.geo_badge || '').toLowerCase();
           const status = (j.geo_status || '').toLowerCase();
           if (g === 'us') {
-            return loc.includes('united states') || loc.includes('us') || badge.includes('us') || badge.includes('🇺🇸') || status.includes('us');
+            return loc.includes('united states') || loc.includes('us') || badge.includes('us') || status.includes('us');
           }
           if (g === 'uk') {
-            return loc.includes('united kingdom') || loc.includes('uk') || loc.includes('london') || badge.includes('uk') || badge.includes('🇬🇧') || status.includes('uk');
+            return loc.includes('united kingdom') || loc.includes('uk') || loc.includes('london') || badge.includes('uk') || status.includes('uk');
           }
           return loc.includes(g) || desc.includes(g) || badge.includes(g);
         });
@@ -233,10 +233,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const badge = (j.geo_badge || '').toLowerCase();
         const status = (j.geo_status || '').toLowerCase();
         if (g === 'us') {
-          return loc.includes('united states') || loc.includes('us') || badge.includes('us') || badge.includes('🇺🇸') || status.includes('us');
+          return loc.includes('united states') || loc.includes('us') || badge.includes('us') || status.includes('us');
         }
         if (g === 'uk') {
-          return loc.includes('united kingdom') || loc.includes('uk') || loc.includes('london') || badge.includes('uk') || badge.includes('🇬🇧') || status.includes('uk');
+          return loc.includes('united kingdom') || loc.includes('uk') || loc.includes('london') || badge.includes('uk') || status.includes('uk');
         }
         return loc.includes(g) || desc.includes(g) || badge.includes(g);
       });
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
     emptyState.classList.add('hidden');
 
     if (state.isMatchingMode && state.candidateProfile) {
-      resultsCount.textContent = `🎯 ${state.totalJobs} Recommendations for ${state.candidateProfile.candidate_name}`;
+      resultsCount.textContent = `${state.totalJobs} recommendations for ${state.candidateProfile.candidate_name}`;
     } else {
       resultsCount.textContent = `Showing ${state.jobs.length} of ${state.totalJobs} remote positions`;
     }
@@ -357,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
       <div>
         <button type="button" class="btn-promo-action" id="promoCardUploadBtn">
-          Match My Resume ↗
+          Match My Resume
         </button>
       </div>
     `;
@@ -408,12 +408,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const scoreClass = job.match_score >= 80 ? 'match-score-high' : (job.match_score >= 60 ? 'match-score-med' : 'match-score-low');
       matchScoreHtml = `
         <div class="match-score-badge ${scoreClass}">
-          <span>✦</span> ${job.match_score}% Match
+          ${job.match_score}% Match
         </div>
       `;
     }
 
-    // Geo Badge (e.g. 🇳🇵 Nepal Remote / 🇮🇳 India Remote / 🌍 Worldwide Remote)
+    // Geo Badge
     let geoBadgeHtml = '';
     if (job.geo_badge) {
       const gColor = job.geo_badge_color || '#10b981';
@@ -429,7 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (job.fit_reasons && job.fit_reasons.length > 0) {
       fitBoxHtml = `
         <div class="card-fit-box">
-          <span>✓</span>
           <span>${escapeHtml(job.fit_reasons[0])}</span>
         </div>
       `;
@@ -451,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tagsHtml = displayTags
       .map(item => {
         const matchedClass = item.isMatched ? 'tag-item tag-item-matched' : 'tag-item';
-        return `<span class="${matchedClass}">${item.isMatched ? '✓ ' : ''}${escapeHtml(item.text)}</span>`;
+        return `<span class="${matchedClass}">${escapeHtml(item.text)}</span>`;
       })
       .join('');
 
@@ -477,9 +476,9 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="job-company-subtitle">
             <span>${escapeHtml(companyName)}</span>
             <span class="company-dot-separator">•</span>
-            <span>📍 ${escapeHtml(job.location || 'Remote')}</span>
+            <span>${escapeHtml(job.location || 'Remote')}</span>
             <span class="company-dot-separator">•</span>
-            <span>⏱️ ${formatDate(job.date)}</span>
+            <span>${formatDate(job.date)}</span>
           </div>
 
           <!-- Badges: Regional Geo & Match Score -->
@@ -503,7 +502,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Talentium Action Row: Solid Black Pill "Apply now" + Quick View + Heart -->
         <div class="card-talentium-actions">
           <a href="${escapeHtml(job.apply_url || '#')}" target="_blank" rel="noopener noreferrer" class="btn-talentium-apply">
-            Apply now ↗
+            Apply now
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:4px; display:inline-block; vertical-align:-1px;">
+              <path d="M7 17l9.2-9.2M17 17V8H8"/>
+            </svg>
           </a>
           <button type="button" class="btn-quick-view view-details-btn" data-job-id="${escapeHtml(job.id)}">
             Quick View
@@ -536,7 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.bookmarkedIds.add(job.id);
         bookmarkBtn.classList.add('bookmarked');
         bookmarkBtn.querySelector('svg').setAttribute('fill', 'currentColor');
-        showToast('Job saved to your bookmarks ❤️');
+        showToast('Job saved to bookmarks');
       }
       localStorage.setItem('findit_bookmarks', JSON.stringify([...state.bookmarkedIds]));
     });
@@ -573,7 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
       modalMatchScore.textContent = `${job.match_score}% Match • High Alignment`;
       if (job.fit_reasons && job.fit_reasons.length > 0) {
         modalMatchReasons.innerHTML = job.fit_reasons
-          .map(r => `<div>✔ ${escapeHtml(r)}</div>`)
+          .map(r => `<div>${escapeHtml(r)}</div>`)
           .join('');
       } else {
         modalMatchReasons.innerHTML = '';
@@ -749,8 +751,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (startTargetLinkedInBtn) startTargetLinkedInBtn.disabled = !hasData;
   }
 
-  // Drag & Drop
-  browseFileBtn.addEventListener('click', () => resumeFileInput.click());
+  // Drag & Drop & File Picker Guards (Keep modal firmly open during upload)
+  let isSelectingFile = false;
+
+  browseFileBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isSelectingFile = true;
+    resumeFileInput.click();
+  });
+
+  dropZone.addEventListener('click', (e) => {
+    if (e.target !== resumeFileInput) {
+      e.stopPropagation();
+      isSelectingFile = true;
+      resumeFileInput.click();
+    }
+  });
+
+  resumeFileInput.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isSelectingFile = true;
+  });
 
   dropZone.addEventListener('dragover', e => {
     e.preventDefault();
@@ -763,6 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   dropZone.addEventListener('drop', e => {
     e.preventDefault();
+    e.stopPropagation();
     dropZone.classList.remove('dragover');
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleSelectedFile(e.dataTransfer.files[0]);
@@ -770,9 +792,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   resumeFileInput.addEventListener('change', e => {
+    setTimeout(() => { isSelectingFile = false; }, 400);
     if (e.target.files && e.target.files.length > 0) {
       handleSelectedFile(e.target.files[0]);
     }
+  });
+
+  window.addEventListener('focus', () => {
+    setTimeout(() => { isSelectingFile = false; }, 400);
   });
 
   function handleSelectedFile(file) {
@@ -788,9 +815,15 @@ document.addEventListener('DOMContentLoaded', () => {
     selectedFileSize.textContent = formatBytes(file.size);
     selectedFileCard.classList.remove('hidden');
     updateStartButtonState();
+
+    // Ensure the modal remains open and visible
+    if (!resumeUploadModal.open) {
+      resumeUploadModal.showModal();
+    }
   }
 
-  removeFileBtn.addEventListener('click', () => {
+  removeFileBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     state.selectedFile = null;
     resumeFileInput.value = '';
     selectedFileCard.classList.add('hidden');
@@ -912,7 +945,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update UI to Match Mode
         activateCandidateRibbon(result.profile);
         closeResumeModal();
-        showToast(`🎯 Found ${result.total_matches} remote jobs across Nepal, India & US/UK Startups!`);
+        showToast(`Found ${result.total_matches} remote jobs across Nepal, India & US/UK Startups!`);
 
         // Switch to Match sort option
         optSortMatch.classList.remove('hidden');
@@ -1071,11 +1104,11 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshBtn.addEventListener('click', async () => {
       if (spinIcon) spinIcon.classList.add('spinning');
       refreshBtn.disabled = true;
-      showToast('Syncing all 6 live job feeds...');
+      showToast('Syncing jobs...');
       await loadJobs(true);
       if (spinIcon) spinIcon.classList.remove('spinning');
       refreshBtn.disabled = false;
-      showToast('Feeds successfully updated!');
+      showToast('Jobs updated');
     });
   }
 
@@ -1117,26 +1150,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Modal Backdrop Close Listeners
   modalCloseBtn.addEventListener('click', closeJobModal);
+  // Dialog backdrop click handling
   jobModal.addEventListener('click', e => {
-    const rect = jobModal.getBoundingClientRect();
-    const isInDialog = (
-      rect.top <= e.clientY &&
-      e.clientY <= rect.top + rect.height &&
-      rect.left <= e.clientX &&
-      e.clientX <= rect.left + rect.width
-    );
-    if (!isInDialog) closeJobModal();
+    if (e.target === jobModal) closeJobModal();
   });
 
+  const uploadModalCard = resumeUploadModal.querySelector('.modal-card');
+  if (uploadModalCard) {
+    uploadModalCard.addEventListener('click', e => {
+      e.stopPropagation();
+    });
+  }
+
   resumeUploadModal.addEventListener('click', e => {
-    const rect = resumeUploadModal.getBoundingClientRect();
-    const isInDialog = (
-      rect.top <= e.clientY &&
-      e.clientY <= rect.top + rect.height &&
-      rect.left <= e.clientX &&
-      e.clientX <= rect.left + rect.width
-    );
-    if (!isInDialog) closeResumeModal();
+    if (isSelectingFile) return;
+    if (e.target === resumeUploadModal) closeResumeModal();
   });
 
   modalCopyBtn.addEventListener('click', () => {

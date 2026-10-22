@@ -44,22 +44,8 @@
       </nav>
 
       <div class="header-actions">
-        <!-- Live Status Pill -->
-        <div class="live-status-pill" id="liveStatusBadge">
-          <span class="pulse-dot"></span>
-          <span id="statusText">6 Feeds Active</span>
-        </div>
-
-        <button id="refreshBtn" class="btn btn-secondary btn-icon" title="Refresh Live Feeds">
-          <svg class="spin-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-          </svg>
-          <span class="btn-label">Sync</span>
-        </button>
-
         <!-- Resume Upload Trigger Button in Header -->
         <button id="headerResumeBtn" class="btn btn-primary btn-resume-cta">
-          <span class="btn-sparkle">📄✨</span>
           <span>Upload Resume</span>
         </button>
       </div>
@@ -76,31 +62,29 @@
         <!-- Left Column: Headline, CTAs, Top Employers -->
         <div class="hero-left">
           <div class="hero-badge">
-            <span class="badge-sparkle">✦</span>
-            <span>AI-Powered Career & Remote Job Platform</span>
+            <span>Remote Tech Platform</span>
           </div>
 
           <h2 class="hero-title">
-            Discover your perfect fit with <span class="gradient-brand-text">findit.</span>
+            Discover your next remote role with <span class="gradient-brand-text">findit.</span>
           </h2>
           
           <p class="hero-subtitle">
-            Aggregating verified live remote roles across LinkedIn, RemoteOK, Himalayas, Arbeitnow, Jobicy & Remotive. Upload your resume for automated skills matching tailored for Nepal & India developers.
+            Curated remote opportunities from verified startups and tech companies hiring in Nepal, India, and worldwide.
           </p>
 
           <div class="hero-cta-group">
             <button class="btn btn-primary btn-hero-cta" id="heroUploadResumeBtn">
-              <span class="btn-icon-symbol">📄</span>
-              <span>Upload Resume & Match</span>
+              <span>Upload Resume</span>
             </button>
             <button class="btn btn-secondary btn-hero-secondary" id="heroTargetGeoBtn">
-              <span>🎯 Nepal & India Remote</span>
+              <span>Nepal & India Remote</span>
             </button>
           </div>
 
-          <!-- Top Employers Bar (Foundit Style) -->
+          <!-- Top Employers Bar -->
           <div class="top-employers-bar">
-            <div class="employers-label">TOP EMPLOYERS HIRING REMOTELY</div>
+            <div class="employers-label">COMPANIES HIRING REMOTELY</div>
             <div class="employers-marquee">
               <span class="employer-tag">Verisk</span>
               <span class="employer-tag">Infosys</span>
@@ -111,12 +95,6 @@
               <span class="employer-tag">BerryBytes</span>
               <span class="employer-tag">Capgemini</span>
             </div>
-          </div>
-
-          <!-- Social Proof Badge -->
-          <div class="hero-social-proof">
-            <div class="rating-stars">★★★★★</div>
-            <span class="rating-text"><strong>4.9/5</strong> developer satisfaction • 10,000+ matches</span>
           </div>
         </div>
 
@@ -216,7 +194,7 @@
               <div class="candidate-name-row">
                 <h3 class="candidate-name" id="ribbonName">Candidate Name</h3>
                 <span class="candidate-exp-badge" id="ribbonExpBadge">6+ Years Exp • Senior</span>
-                <span class="match-mode-indicator">🎯 Personalized Match Active</span>
+                <span class="match-mode-indicator">Personalized Match Active</span>
               </div>
               <p class="candidate-role" id="ribbonRole">Senior Full Stack Engineer</p>
             </div>
@@ -235,30 +213,6 @@
       </div>
     </section>
 
-    <!-- Metrics Stats Banner (Glass Card Row) -->
-    <section class="stats-grid" id="statsGrid">
-      <div class="stat-card">
-        <span class="stat-label">Active Listings</span>
-        <div class="stat-value" id="statTotalJobs">--</div>
-        <span class="stat-meta">Across 6 live endpoints</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">Salary Transparency</span>
-        <div class="stat-value" id="statSalaryCount">--</div>
-        <span class="stat-meta">Explicit salary ranges</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">Verified Remote</span>
-        <div class="stat-value text-emerald">100%</div>
-        <span class="stat-meta">Worldwide / Geo-distributed</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">Last Synced</span>
-        <div class="stat-value stat-small" id="statLastSync">Just now</div>
-        <span class="stat-meta" id="statCacheAge">Instant cached response</span>
-      </div>
-    </section>
-
     <!-- Dashboard & Job Search Section (Talentium Style: Sidebar Filters + Card Grid) -->
     <section class="dashboard-section" id="exploreJobsSection">
       
@@ -270,16 +224,16 @@
             <button type="button" class="sidebar-reset-btn" id="sidebarResetBtn">Reset all</button>
           </div>
 
-          <!-- Target Geo Regions (Nepal, India & US/UK Startups Focus) -->
+          <!-- Target Geo Regions -->
           <div class="sidebar-filter-group" id="targetRegionSection">
             <h5 class="filter-group-title">Target Regions</h5>
             <div class="geo-chips-list">
               <button type="button" class="geo-chip active" data-geo="all">All Regions</button>
-              <button type="button" class="geo-chip" data-geo="Nepal">🇳🇵 Nepal Remote</button>
-              <button type="button" class="geo-chip" data-geo="India">🇮🇳 India Remote</button>
-              <button type="button" class="geo-chip" data-geo="US">🇺🇸 US Startups</button>
-              <button type="button" class="geo-chip" data-geo="UK">🇬🇧 UK Startups</button>
-              <button type="button" class="geo-chip" data-geo="Worldwide">🌍 Worldwide</button>
+              <button type="button" class="geo-chip" data-geo="Nepal">Nepal Remote</button>
+              <button type="button" class="geo-chip" data-geo="India">India Remote</button>
+              <button type="button" class="geo-chip" data-geo="US">US Startups</button>
+              <button type="button" class="geo-chip" data-geo="UK">UK Startups</button>
+              <button type="button" class="geo-chip" data-geo="Worldwide">Worldwide</button>
             </div>
           </div>
 
@@ -361,10 +315,10 @@
             <!-- View Switcher Tabs -->
             <div class="view-switcher-tabs" role="tablist">
               <button class="view-tab active" id="tabBrowseJobs" role="tab" aria-selected="true">
-                <span>🔍</span> Browse Jobs
+                Browse Jobs
               </button>
               <button class="view-tab" id="tabResumeMatch" role="tab" aria-selected="false">
-                <span>⚡</span> AI Matcher
+                Resume Match
               </button>
             </div>
 
@@ -402,7 +356,12 @@
 
         <!-- Empty State -->
         <div class="empty-state hidden" id="emptyState">
-          <div class="empty-state-icon">🔍</div>
+          <div class="empty-state-icon">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
           <h3 class="empty-state-title">No matching positions found</h3>
           <p class="empty-state-desc">Try clearing your search term, switching provider tabs, or uploading your resume for automated matching.</p>
           <button class="btn btn-primary" id="resetFiltersBtn">Reset All Filters</button>
@@ -418,10 +377,15 @@
     <div class="modal-card modal-card-upload">
       <div class="modal-header">
         <div class="modal-title-with-icon">
-          <div class="upload-icon-badge">📄</div>
+          <div class="upload-icon-badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+          </div>
           <div>
-            <h2 class="modal-heading">Smart Resume Matcher</h2>
-            <p class="modal-subheading">Analyze your experience & skills to rank the top matching remote jobs</p>
+            <h2 class="modal-heading">Match by Resume</h2>
+            <p class="modal-subheading">Analyze your experience & skills to rank matching remote jobs</p>
           </div>
         </div>
         <button class="modal-close-btn" id="resumeModalCloseBtn" aria-label="Close modal">✕</button>
@@ -439,7 +403,13 @@
           <div class="drop-zone" id="dropZone">
             <input type="file" id="resumeFileInput" accept=".pdf,.docx,.doc,.txt" class="drop-zone-input">
             <div class="drop-zone-content">
-              <div class="drop-icon">☁️</div>
+              <div class="drop-icon">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+              </div>
               <h3 class="drop-title">Drag & drop your resume here</h3>
               <p class="drop-subtitle">Supports <strong>PDF</strong>, <strong>DOCX</strong>, and <strong>TXT</strong> files up to 10MB</p>
               <button type="button" class="btn btn-secondary btn-sm" id="browseFileBtn">Browse Files</button>
@@ -449,7 +419,12 @@
           <!-- Selected File Pill -->
           <div class="selected-file-card hidden" id="selectedFileCard">
             <div class="file-info-group">
-              <span class="file-icon">📑</span>
+              <span class="file-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+              </span>
               <div>
                 <div class="file-name" id="selectedFileName">resume.pdf</div>
                 <div class="file-size" id="selectedFileSize">240 KB</div>
@@ -469,37 +444,37 @@
           ></textarea>
         </div>
 
-        <!-- Personal Targeting Options: Nepal, India & US/UK Startups -->
+        <!-- Personal Targeting Options -->
         <div class="target-geo-options">
           <div class="target-geo-header">
             <div class="target-geo-title">
-              <span>🎯</span> Target Regions: Nepal, India & US/UK Startups
+              Target Regions
             </div>
-            <span class="target-geo-badge">Geo-Screened</span>
+            <span class="target-geo-badge">Geo Filtered</span>
           </div>
           <p class="target-geo-subtitle">
-            Scrapes live LinkedIn remote roles for Nepal & India developers, including US and UK startups hiring remotely from Nepal or India.
+            Match live remote roles open to candidates from Nepal and India, including US and UK startups.
           </p>
           <div class="target-geo-checkboxes">
             <label class="geo-checkbox-label">
               <input type="checkbox" id="geoNepal" checked>
-              <span>🇳🇵 Nepal Remote</span>
+              <span>Nepal Remote</span>
             </label>
             <label class="geo-checkbox-label">
               <input type="checkbox" id="geoIndia" checked>
-              <span>🇮🇳 India Remote</span>
+              <span>India Remote</span>
             </label>
             <label class="geo-checkbox-label">
               <input type="checkbox" id="geoUS" checked>
-              <span>🇺🇸 US Startups (Remote IN/NP)</span>
+              <span>US Startups</span>
             </label>
             <label class="geo-checkbox-label">
               <input type="checkbox" id="geoUK" checked>
-              <span>🇬🇧 UK Startups (Remote IN/NP)</span>
+              <span>UK Startups</span>
             </label>
             <label class="geo-checkbox-label">
               <input type="checkbox" id="geoWorldwide" checked>
-              <span>🌍 Worldwide Remote</span>
+              <span>Worldwide Remote</span>
             </label>
           </div>
         </div>
@@ -515,10 +490,10 @@
         <button type="button" class="btn btn-secondary" id="cancelResumeBtn">Cancel</button>
         <div class="modal-footer-actions">
           <button type="button" class="btn btn-secondary" id="startMatchBtn" disabled>
-            <span>⚡ All Sources</span>
+            <span>All Sources</span>
           </button>
           <button type="button" class="btn btn-primary btn-match-target" id="startTargetLinkedInBtn" disabled>
-            <span>🎯 Match LinkedIn (Nepal, India & US/UK)</span>
+            <span>Match Remote Jobs</span>
           </button>
         </div>
       </div>
@@ -573,10 +548,14 @@
 
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="modalCopyBtn">
-          <span>📋 Copy Link</span>
+          <span>Copy Link</span>
         </button>
         <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" id="modalApplyBtn">
-          <span>Apply Directly ↗</span>
+          <span>Apply Directly</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px;">
+            <line x1="7" y1="17" x2="17" y2="7"></line>
+            <polyline points="7 7 17 7 17 17"></polyline>
+          </svg>
         </a>
       </div>
     </div>
@@ -584,14 +563,18 @@
 
   <!-- Floating Toast Notification -->
   <div class="toast-notification hidden" id="toastNotification" role="alert">
-    <span class="toast-icon">✓</span>
+    <span class="toast-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </span>
     <span class="toast-message" id="toastMessage">Action completed</span>
   </div>
 
   <footer class="app-footer">
     <div class="footer-container">
-      <p>findit. Remote Engine • Aggregating live endpoints: LinkedIn, RemoteOK, Himalayas, Arbeitnow, Jobicy, and Remotive.</p>
-      <p class="footer-credits">Glass + Gradient Startup Edition • Local AI Resume Matching with zero vendor lock-in.</p>
+      <p>findit. Remote Engine • Live feeds: LinkedIn, RemoteOK, Himalayas, Arbeitnow, Jobicy, and Remotive.</p>
+      <p class="footer-credits">Curated remote engineering roles open to Nepal & India talent.</p>
     </div>
   </footer>
 

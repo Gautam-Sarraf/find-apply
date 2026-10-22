@@ -366,7 +366,7 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"\n💼 LinkedIn Job Scraper")
+    print(f"\nLinkedIn Job Scraper")
     print(f"==================================================")
     print(f"Keywords:    {args.keywords}")
     print(f"Location:    {args.location}")
@@ -387,15 +387,15 @@ def main():
     )
     elapsed = time.time() - t0
 
-    print(f"\n✅ Retrieved {len(jobs)} jobs in {elapsed:.2f}s\n")
+    print(f"\nRetrieved {len(jobs)} jobs in {elapsed:.2f}s\n")
     for i, j in enumerate(jobs, 1):
-        sal = f" | 💰 {j['salary']}" if j["has_salary"] else ""
+        sal = f" | {j['salary']}" if j["has_salary"] else ""
         date_badge = f" ({j['date']})" if j.get("date") else ""
         print(f"[{i:02d}] {j['title']} @ {j['company']}")
-        print(f"     📍 {j['location']}{sal}{date_badge}")
-        print(f"     🔗 {j['apply_url']}")
+        print(f"     Location: {j['location']}{sal}{date_badge}")
+        print(f"     Apply:    {j['apply_url']}")
         if j.get("tags"):
-            print(f"     🏷️  {', '.join(j['tags'][:5])}")
+            print(f"     Tags:     {', '.join(j['tags'][:5])}")
         print()
 
     if args.output:
@@ -413,7 +413,7 @@ def main():
         else:
             with open(out_path, "w", encoding="utf-8") as f:
                 json.dump(jobs, f, indent=2, ensure_ascii=False)
-        print(f"📁 Results exported to: {out_path}")
+        print(f"Results exported to: {out_path}")
 
 
 if __name__ == "__main__":

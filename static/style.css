@@ -1656,10 +1656,11 @@ body {
 .job-modal {
   border: none;
   background: transparent;
-  padding: 1.5rem;
+  padding: 0;
   max-width: 720px;
   width: 90vw;
   margin: auto;
+  overflow: visible;
 }
 
 .job-modal::backdrop {
@@ -1717,7 +1718,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.35rem;
+  color: var(--accent-primary);
 }
 
 .modal-heading {
@@ -1789,8 +1790,11 @@ body {
 }
 
 .drop-icon {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary);
+  margin-bottom: 0.75rem;
 }
 
 .drop-title {
@@ -1824,7 +1828,10 @@ body {
 }
 
 .file-icon {
-  font-size: 1.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary);
 }
 
 .file-name {
