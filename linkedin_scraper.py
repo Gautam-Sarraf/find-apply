@@ -50,6 +50,50 @@ def clean_html(raw_html: Optional[str]) -> str:
     return re.sub(r"\s+", " ", clean).strip()
 
 
+def parse_date_to_timestamp(d: Any) -> int:
+    """Converts diverse date representations (epoch, ISO string, relative text) to Unix timestamp (seconds)."""
+    if not d:
+        return 0
+    if isinstance(d, (int, float)):
+        return int(d) if d < 1e11 else int(d / 1000)
+    
+    d_str = str(d).strip()
+    if d_str.isdigit():
+        val = int(d_str)
+        return val if val < 1e11 else int(val / 1000)
+    
+    now = time.time()
+    lower = d_str.lower()
+    if "just now" in lower or "today" in lower or "now" in lower:
+        return int(now)
+    
+    m_hour = re.search(r"(\d+)\s*(?:hour|hr)", lower)
+    if m_hour:
+        return int(now - int(m_hour.group(1)) * 3600)
+        
+    m_day = re.search(r"(\d+)\s*day", lower)
+    if m_day:
+        return int(now - int(m_day.group(1)) * 86400)
+        
+    m_week = re.search(r"(\d+)\s*week", lower)
+    if m_week:
+        return int(now - int(m_week.group(1)) * 7 * 86400)
+        
+    m_month = re.search(r"(\d+)\s*month", lower)
+    if m_month:
+        return int(now - int(m_month.group(1)) * 30 * 86400)
+
+    clean_iso = d_str.replace("Z", "+00:00")
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(clean_iso)
+        return int(dt.timestamp())
+    except Exception:
+        pass
+        
+    return int(now - 14 * 86400)
+
+
 def extract_salary_from_text(text: str) -> Optional[str]:
     """Detects salary patterns like $120,000 - $160,000 or $50/hr or $100k+ in text."""
     if not text:
@@ -181,15 +225,16 @@ class LinkedInScraper:
         location: Optional[str] = "Remote",
         remote_only: bool = True,
         time_filter: str = "24h",  # '24h', 'week', 'month', 'any'
-        limit: int = 25,
+        limit: int = 50,
         fetch_details: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Scrapes live LinkedIn job postings matching keywords and filters.
         """
         jobs: List[Dict[str, Any]] = []
-        batch_size = 25
-        max_start = max(batch_size, limit)
+        seen_job_ids = set()
+        start = 0
+        max_start = max(limit * 2, 80)
 
         # Build time filter parameter: f_TPR
         tpr_map = {
@@ -201,10 +246,7 @@ class LinkedInScraper:
         tpr_val = tpr_map.get(time_filter.lower()) if time_filter else None
 
         async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=14.0) as client:
-            for start in range(0, max_start, batch_size):
-                if len(jobs) >= limit:
-                    break
-
+            while len(jobs) < limit and start <= max_start:
                 params = {
                     "keywords": keywords or "",
                     "location": location or "",
@@ -234,6 +276,7 @@ class LinkedInScraper:
                         logger.info("No more job cards returned from LinkedIn.")
                         break
 
+                    added_in_step = 0
                     for card in cards:
                         if len(jobs) >= limit:
                             break
@@ -249,6 +292,10 @@ class LinkedInScraper:
                         # Extract Job ID
                         job_id_match = re.search(r"view/.*?(\d{7,})", raw_link) or re.search(r"(\d{8,})", raw_link)
                         job_id = job_id_match.group(1) if job_id_match else str(abs(hash(clean_link)))
+
+                        if job_id in seen_job_ids:
+                            continue
+                        seen_job_ids.add(job_id)
 
                         title = title_elem.get_text(strip=True) if title_elem else "Open Role"
 
@@ -270,7 +317,14 @@ class LinkedInScraper:
                         time_elem = card.find("time")
                         date_str = ""
                         if time_elem:
-                            date_str = time_elem.get("datetime") or time_elem.get_text(strip=True)
+                            raw_dt = time_elem.get("datetime")
+                            if raw_dt:
+                                date_str = raw_dt.strip()
+                            else:
+                                raw_txt = time_elem.get_text(strip=True)
+                                date_str = re.sub(r"\s+", " ", raw_txt).strip()
+
+                        date_ts = parse_date_to_timestamp(date_str)
 
                         # Salary from card badge if present
                         salary_elem = card.find("span", class_=lambda x: x and "salary" in x)
@@ -291,10 +345,17 @@ class LinkedInScraper:
                             "apply_url": clean_link or f"https://www.linkedin.com/jobs/view/{job_id}",
                             "tags": ["LinkedIn", "Remote" if remote_only else "On-site"],
                             "date": date_str,
+                            "date_ts": date_ts,
                             "description": "",
                             "excerpt": f"{title} at {company} ({loc_str})"
                         }
                         jobs.append(job_item)
+                        added_in_step += 1
+
+                    if len(cards) < 3 or added_in_step == 0:
+                        break
+
+                    start += len(cards)
 
                 except Exception as e:
                     logger.error(f"Error requesting LinkedIn jobs batch: {e}")

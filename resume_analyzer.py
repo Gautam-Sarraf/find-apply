@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
 import pypdf
 import docx
+from linkedin_scraper import parse_date_to_timestamp
 
 # Comprehensive domain skill catalog
 SKILL_TAXONOMY = {
@@ -437,8 +438,10 @@ class JobMatchingEngine:
             if job.get("has_salary"):
                 fit_reasons.append(f"Disclosed compensation: {job.get('salary')}")
 
+            date_ts = job.get("date_ts") or parse_date_to_timestamp(job.get("date"))
             matched_results.append({
                 **job,
+                "date_ts": date_ts,
                 "match_score": total_score,
                 "match_grade": "Excellent Match" if total_score >= 80 else ("Strong Match" if total_score >= 60 else "Good Match"),
                 "matched_skills": matched_skills,
@@ -446,6 +449,6 @@ class JobMatchingEngine:
                 "fit_reasons": fit_reasons
             })
 
-        # Sort by highest match score
-        matched_results.sort(key=lambda x: x["match_score"], reverse=True)
+        # Sort by latest date descending on top, and tie-break by match score
+        matched_results.sort(key=lambda x: (x.get("date_ts", 0), x.get("match_score", 0)), reverse=True)
         return matched_results

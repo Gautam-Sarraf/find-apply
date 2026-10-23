@@ -200,7 +200,7 @@ async def match_resume_linkedin_target(
     include_us_startups: bool = Form(True),
     include_uk_startups: bool = Form(True),
     time_filter: str = Form("month"),
-    max_results: int = Form(35),
+    max_results: int = Form(100),
     min_score: int = Form(20)
 ):
     """

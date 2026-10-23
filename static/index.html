@@ -326,8 +326,9 @@
             <div class="results-sort">
               <label for="sortSelect" class="sr-only">Sort jobs by</label>
               <select id="sortSelect" class="select-dropdown">
-                <option value="default" id="optSortDefault">Sort: Default (Featured)</option>
+                <option value="latest" id="optSortLatest" selected>Sort: Latest Jobs First (Newest)</option>
                 <option value="match" id="optSortMatch" class="hidden">Sort: Best Match % First</option>
+                <option value="default" id="optSortDefault">Sort: Default (Featured)</option>
                 <option value="salary">Sort: Highest Salary First</option>
                 <option value="title">Sort: Job Title (A-Z)</option>
                 <option value="company">Sort: Company Name (A-Z)</option>
@@ -477,6 +478,21 @@
               <span>Worldwide Remote</span>
             </label>
           </div>
+        </div>
+
+        <!-- Scraper Result Limit Option -->
+        <div class="target-limit-section">
+          <div class="target-limit-header">
+            <span class="target-limit-title">LinkedIn Scraper Limit</span>
+            <span class="target-limit-hint">Expanded for comprehensive match coverage</span>
+          </div>
+          <div class="target-limit-pills" id="scraperLimitPills">
+            <button type="button" class="limit-pill" data-limit="50">50 Jobs</button>
+            <button type="button" class="limit-pill active" data-limit="100">100 Jobs</button>
+            <button type="button" class="limit-pill" data-limit="150">150 Jobs</button>
+            <button type="button" class="limit-pill" data-limit="200">200 Jobs</button>
+          </div>
+          <input type="hidden" id="maxResultsInput" value="100">
         </div>
 
         <!-- Analysis Progress Overlay (Hidden by default) -->

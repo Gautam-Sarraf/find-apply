@@ -9,7 +9,7 @@ import logging
 import re
 from typing import Dict, List, Optional, Any, Tuple
 import httpx
-from linkedin_scraper import scraper, DEFAULT_HEADERS
+from linkedin_scraper import scraper, DEFAULT_HEADERS, parse_date_to_timestamp
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("TargetJobMatcher")
@@ -327,7 +327,7 @@ class TargetJobMatcher:
         include_us_startups: bool = True,
         include_uk_startups: bool = True,
         time_filter: str = "month",
-        max_results: int = 35,
+        max_results: int = 100,
         min_score: int = 20
     ) -> Dict[str, Any]:
         """
@@ -340,7 +340,7 @@ class TargetJobMatcher:
            - UK Startups hiring remotely from Nepal/India
            - Worldwide Remote
         3. Screens for geographical eligibility and startup remote fit
-        4. Scores and ranks postings by relevance
+        4. Scores and ranks postings with newest/latest jobs on top no matter their region
         """
         if locations is None:
             locations = ["Nepal", "India"]
@@ -350,7 +350,7 @@ class TargetJobMatcher:
         secondary_q = queries[1] if len(queries) > 1 else primary_q
         logger.info(f"Target matching for {profile.get('candidate_name')} with queries: {queries}")
 
-        # Construct specific search channel tasks
+        # Construct specific search channel tasks with expanded limits
         search_tasks = []
         channel_labels = []
 
@@ -358,11 +358,11 @@ class TargetJobMatcher:
         if any("nepal" in loc.lower() for loc in locations):
             search_tasks.append(
                 scraper.scrape_jobs_async(
-                    keywords="Python remote",
+                    keywords=f"{primary_q} remote",
                     location="Nepal",
                     remote_only=True,
                     time_filter=time_filter,
-                    limit=8,
+                    limit=25,
                     fetch_details=False
                 )
             )
@@ -376,7 +376,7 @@ class TargetJobMatcher:
                     location="India",
                     remote_only=True,
                     time_filter=time_filter,
-                    limit=10,
+                    limit=45,
                     fetch_details=False
                 )
             )
@@ -391,7 +391,7 @@ class TargetJobMatcher:
                     location="United States",
                     remote_only=True,
                     time_filter=time_filter,
-                    limit=8,
+                    limit=35,
                     fetch_details=False
                 )
             )
@@ -403,7 +403,7 @@ class TargetJobMatcher:
                     location="United States",
                     remote_only=True,
                     time_filter=time_filter,
-                    limit=8,
+                    limit=35,
                     fetch_details=False
                 )
             )
@@ -417,7 +417,7 @@ class TargetJobMatcher:
                     location="United Kingdom",
                     remote_only=True,
                     time_filter=time_filter,
-                    limit=8,
+                    limit=35,
                     fetch_details=False
                 )
             )
@@ -431,7 +431,7 @@ class TargetJobMatcher:
                     location="Worldwide",
                     remote_only=True,
                     time_filter=time_filter,
-                    limit=8,
+                    limit=35,
                     fetch_details=False
                 )
             )
@@ -454,9 +454,9 @@ class TargetJobMatcher:
             else:
                 logger.warning(f"Channel '{label}' encountered error: {batch}")
 
-        logger.info(f"Scraped {len(scraped_jobs)} distinct postings across all channels. Enriching details...")
+        logger.info(f"Scraped {len(scraped_jobs)} distinct postings across all channels. Enriching top details...")
 
-        # Concurrently fetch detailed job descriptions and criteria for evaluation
+        # Concurrently fetch detailed job descriptions for top candidates while respecting rate limits
         if scraped_jobs:
             candidate_skills = [s.lower() for s in profile.get("skills", [])]
             def prelim_rank(j):
@@ -464,10 +464,10 @@ class TargetJobMatcher:
                 return sum(1 for s in candidate_skills if s in t) + (2 if "python" in t else 0)
 
             scraped_jobs.sort(key=prelim_rank, reverse=True)
-            jobs_to_enrich = scraped_jobs[:24]
+            jobs_to_enrich = scraped_jobs[:12]
 
-            sem = asyncio.Semaphore(2)
-            async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=12.0) as client:
+            sem = asyncio.Semaphore(3)
+            async with httpx.AsyncClient(headers=DEFAULT_HEADERS, follow_redirects=True, timeout=8.0) as client:
                 detail_tasks = [
                     scraper.fetch_job_detail_async(client, j["job_id"], semaphore=sem)
                     for j in jobs_to_enrich
@@ -509,13 +509,15 @@ class TargetJobMatcher:
                 job_card["geo_badge"] = geo_eval["badge"]
                 job_card["geo_badge_color"] = geo_eval["badge_color"]
                 job_card["geo_status"] = geo_eval["status"]
+                # Ensure date timestamp is present for recency sorting
+                job_card["date_ts"] = j.get("date_ts") or parse_date_to_timestamp(j.get("date"))
                 ranked_jobs.append(job_card)
 
-        # Sort by match score descending
-        ranked_jobs.sort(key=lambda x: x["match_score"], reverse=True)
+        # Sort by latest date descending on top (no matter their region); for equal dates, by match score
+        ranked_jobs.sort(key=lambda x: (x.get("date_ts", 0), x.get("match_score", 0)), reverse=True)
         final_jobs = ranked_jobs[:max_results]
 
-        logger.info(f"Successfully matched and ranked {len(final_jobs)} jobs for {profile.get('candidate_name')} (including US/UK startups).")
+        logger.info(f"Successfully matched and ranked {len(final_jobs)} latest jobs for {profile.get('candidate_name')} (across all regions).")
 
         return {
             "status": "success",

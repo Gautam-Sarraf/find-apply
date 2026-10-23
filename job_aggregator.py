@@ -6,6 +6,7 @@ import re
 import time
 from typing import List, Dict, Optional, Any
 import httpx
+from linkedin_scraper import parse_date_to_timestamp
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("JobAggregator")
@@ -294,7 +295,7 @@ class LinkedInProvider(JobProvider):
         from linkedin_scraper import scraper
         self.scraper = scraper
 
-    async def fetch_async(self, client: httpx.AsyncClient, limit: int = 40) -> List[Dict[str, Any]]:
+    async def fetch_async(self, client: httpx.AsyncClient, limit: int = 60) -> List[Dict[str, Any]]:
         try:
             # Scrape latest tech & remote postings via LinkedIn scraper
             jobs = await self.scraper.scrape_jobs_async(
@@ -347,7 +348,7 @@ class JobAggregator:
 
             logger.info("Fetching jobs concurrently from all 6 providers...")
             async with httpx.AsyncClient(headers=DEFAULT_HEADERS, timeout=14.0) as client:
-                tasks = [p.fetch_async(client, limit=40) for p in self.providers]
+                tasks = [p.fetch_async(client, limit=50) for p in self.providers]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
 
             all_jobs: List[Dict[str, Any]] = []
@@ -365,11 +366,16 @@ class JobAggregator:
                 key = (j.get("company", "").strip().lower(), j.get("title", "").strip().lower())
                 if key not in seen and key != ("", ""):
                     seen.add(key)
+                    if not j.get("date_ts"):
+                        j["date_ts"] = parse_date_to_timestamp(j.get("date"))
                     deduped.append(j)
+
+            # Sort with latest postings on top
+            deduped.sort(key=lambda x: x.get("date_ts", 0), reverse=True)
 
             self._cached_jobs = deduped
             self._last_fetch_time = time.time()
-            logger.info(f"Cache updated with {len(deduped)} total unique jobs")
+            logger.info(f"Cache updated with {len(deduped)} total unique jobs (sorted newest first)")
             return self._cached_jobs
 
     async def search_async(

@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     provider: 'all',
     geoRegion: 'all',
     salaryOnly: false,
-    sortBy: 'default',
+    sortBy: 'latest',
     page: 1,
     pageSize: 24,
     totalJobs: 0,
@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const geoChips = document.querySelectorAll('.geo-chip');
   const salaryToggle = document.getElementById('salaryToggle');
   const sortSelect = document.getElementById('sortSelect');
+  const optSortLatest = document.getElementById('optSortLatest');
   const optSortMatch = document.getElementById('optSortMatch');
   const optSortDefault = document.getElementById('optSortDefault');
   const jobsContainer = document.getElementById('jobsContainer');
@@ -106,6 +107,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const resumeTextInput = document.getElementById('resumeTextInput');
   const analysisProgress = document.getElementById('analysisProgress');
   const progressStatusText = document.getElementById('progressStatusText');
+  const scraperLimitPills = document.querySelectorAll('#scraperLimitPills .limit-pill');
+  const maxResultsInput = document.getElementById('maxResultsInput');
 
   // Job Details Modal Elements
   const jobModal = document.getElementById('jobModal');
@@ -254,9 +257,19 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Sorting
-    if (state.sortBy === 'match') {
-      dataset.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
+    // Sorting - Latest jobs on top (by date_ts descending), with match score tie-breaker
+    if (state.sortBy === 'latest' || state.sortBy === 'default') {
+      dataset.sort((a, b) => {
+        const dateDiff = (b.date_ts || 0) - (a.date_ts || 0);
+        if (dateDiff !== 0) return dateDiff;
+        return (b.match_score || 0) - (a.match_score || 0);
+      });
+    } else if (state.sortBy === 'match') {
+      dataset.sort((a, b) => {
+        const matchDiff = (b.match_score || 0) - (a.match_score || 0);
+        if (matchDiff !== 0) return matchDiff;
+        return (b.date_ts || 0) - (a.date_ts || 0);
+      });
     } else if (state.sortBy === 'salary') {
       dataset.sort((a, b) => (b.has_salary ? 1 : 0) - (a.has_salary ? 1 : 0));
     } else if (state.sortBy === 'title') {
@@ -296,7 +309,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function applySorting() {
-    if (state.sortBy === 'match') {
+    if (state.sortBy === 'latest' || state.sortBy === 'default') {
+      state.jobs.sort((a, b) => (b.date_ts || 0) - (a.date_ts || 0));
+    } else if (state.sortBy === 'match') {
       state.jobs.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
     } else if (state.sortBy === 'salary') {
       state.jobs.sort((a, b) => (b.has_salary ? 1 : 0) - (a.has_salary ? 1 : 0));
@@ -478,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="company-dot-separator">•</span>
             <span>${escapeHtml(job.location || 'Remote')}</span>
             <span class="company-dot-separator">•</span>
-            <span>${formatDate(job.date)}</span>
+            <span>${formatDate(job.date, job.date_ts)}</span>
           </div>
 
           <!-- Badges: Regional Geo & Match Score -->
@@ -567,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
     modalJobCompany.textContent = job.company;
     modalJobLocation.textContent = job.location || 'Worldwide / Remote';
     modalJobSalary.textContent = job.salary || 'Not specified';
-    modalJobDate.textContent = formatDate(job.date);
+    modalJobDate.textContent = formatDate(job.date, job.date_ts);
 
     // Match Highlight in modal
     if (job.match_score !== undefined) {
@@ -664,15 +679,50 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
   }
 
-  function formatDate(d) {
-    if (!d) return 'Recently';
-    try {
-      const date = new Date(d);
-      if (isNaN(date.getTime())) return 'Recently';
-      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    } catch {
-      return 'Recently';
+  function formatDate(d, dateTs) {
+    if (!dateTs && !d) return 'Recently';
+    let ts = dateTs;
+    if (!ts && d) {
+      if (typeof d === 'number') {
+        ts = d < 1e11 ? d : Math.floor(d / 1000);
+      } else if (!isNaN(Number(d))) {
+        const n = Number(d);
+        ts = n < 1e11 ? n : Math.floor(n / 1000);
+      } else {
+        const parsed = Date.parse(d);
+        if (!isNaN(parsed)) {
+          ts = Math.floor(parsed / 1000);
+        }
+      }
     }
+
+    if (ts) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const diffSec = nowSec - ts;
+      if (diffSec < 0) return 'Just now';
+      if (diffSec < 3600) {
+        const mins = Math.max(1, Math.floor(diffSec / 60));
+        return `${mins}m ago`;
+      }
+      if (diffSec < 86400) {
+        const hours = Math.floor(diffSec / 3600);
+        return `${hours}h ago`;
+      }
+      if (diffSec < 172800) {
+        return 'Yesterday';
+      }
+      if (diffSec < 604800) {
+        const days = Math.floor(diffSec / 86400);
+        return `${days}d ago`;
+      }
+      const date = new Date(ts * 1000);
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
+    if (typeof d === 'string' && d.trim()) {
+      return d.trim();
+    }
+    return 'Recently';
   }
 
   // ==========================================
@@ -687,6 +737,19 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     openResumeModal();
   });
+
+  // Scraper limit pills listener
+  if (scraperLimitPills && scraperLimitPills.length > 0) {
+    scraperLimitPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        scraperLimitPills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        if (maxResultsInput) {
+          maxResultsInput.value = pill.getAttribute('data-limit') || '100';
+        }
+      });
+    });
+  }
 
   // Hero Target Geo button
   if (heroTargetGeoBtn) {
@@ -872,10 +935,10 @@ document.addEventListener('DOMContentLoaded', () => {
       closeResumeModal();
       showToast(`Matched ${result.total_matches} jobs for ${result.profile.candidate_name}!`);
 
-      // Switch to Match sort option
+      // Switch to Latest sort option with match ties
       optSortMatch.classList.remove('hidden');
-      sortSelect.value = 'match';
-      state.sortBy = 'match';
+      sortSelect.value = 'latest';
+      state.sortBy = 'latest';
       state.page = 1;
 
       tabBrowseJobs.classList.remove('active');
@@ -925,7 +988,10 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('include_uk_startups', geoUK && geoUK.checked ? 'true' : 'false');
         formData.append('time_filter', 'month');
 
-        progressStatusText.textContent = `Scraping live LinkedIn remote jobs for ${channelsSummary.join(', ')}...`;
+        const maxLimit = maxResultsInput ? maxResultsInput.value : '100';
+        formData.append('max_results', maxLimit);
+
+        progressStatusText.textContent = `Scraping up to ${maxLimit} live LinkedIn remote jobs for ${channelsSummary.join(', ')}...`;
 
         const response = await fetch('/api/resume/linkedin-target-match', {
           method: 'POST',
@@ -947,10 +1013,10 @@ document.addEventListener('DOMContentLoaded', () => {
         closeResumeModal();
         showToast(`Found ${result.total_matches} remote jobs across Nepal, India & US/UK Startups!`);
 
-        // Switch to Match sort option
+        // Switch to Latest sort option
         optSortMatch.classList.remove('hidden');
-        sortSelect.value = 'match';
-        state.sortBy = 'match';
+        sortSelect.value = 'latest';
+        state.sortBy = 'latest';
         state.page = 1;
 
         tabBrowseJobs.classList.remove('active');
@@ -992,8 +1058,8 @@ document.addEventListener('DOMContentLoaded', () => {
     state.isMatchingMode = false;
     candidateRibbon.classList.add('hidden');
     optSortMatch.classList.add('hidden');
-    sortSelect.value = 'default';
-    state.sortBy = 'default';
+    sortSelect.value = 'latest';
+    state.sortBy = 'latest';
     state.page = 1;
     loadJobs();
   }

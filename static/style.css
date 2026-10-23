@@ -1927,6 +1927,63 @@ body {
   cursor: pointer;
 }
 
+/* Target Scraper Limit Controls */
+.target-limit-section {
+  margin-top: 1rem;
+  padding: 0.9rem 1.15rem;
+  border-radius: var(--radius-md);
+  background: rgba(14, 165, 233, 0.05);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+.target-limit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.target-limit-title {
+  font-weight: 800;
+  color: #0284c7;
+  font-size: 0.875rem;
+}
+
+.target-limit-hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.target-limit-pills {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.limit-pill {
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.limit-pill:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.limit-pill.active {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
 /* Progress Overlay */
 .analysis-progress {
   display: flex;
